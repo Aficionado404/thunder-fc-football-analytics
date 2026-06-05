@@ -223,14 +223,14 @@ Password: pass004
 
 ## Future Improvements
 
-* Player comparison system
-* Team performance analytics
-* Injury prediction module
-* Live match integration
-* Advanced machine learning models
-* REST API support
-* Mobile responsive dashboard
-* Cloud deployment
+- Real-time match data integration
+- Injury risk prediction using machine learning
+- Advanced forecasting models (LSTM/XGBoost)
+- PDF and Excel report generation
+- Mobile-responsive dashboard
+- Cloud deployment
+- Multi-team league management
+- Transfer recommendation system
 
 ---
 
