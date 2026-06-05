@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Performance — {{ team_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--pitch:#0a1628;--grass:#00c851;--grass-dark:#009c3b;--gold:#f5c518;--white:#f0f4ff;--muted:#8892a4;--surface:#111d30;--surface2:#172035;--border:rgba(255,255,255,0.07);--danger:#ff4757;--radius:12px;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--pitch);color:var(--white);min-height:100vh;}
+        .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+        .topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+        .topbar-logo span{color:var(--grass);}
+        .role-chip{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(0,200,81,0.15);color:var(--grass);font-weight:600;margin-left:14px;}
+        .btn-back{padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .25s;}
+        .btn-back:hover{color:var(--white);border-color:rgba(255,255,255,0.2);}
+        .main{max-width:900px;margin:0 auto;padding:40px 24px;}
+        .page-header{margin-bottom:28px;animation:fadeUp .4s ease both;}
+        .page-header h1{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:2px;}
+        .page-header p{color:var(--muted);margin-top:4px;font-size:14px;}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px;animation:fadeUp .5s ease both;position:relative;overflow:hidden;}
+        .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--grass));}
+        .player-info{display:flex;align-items:center;gap:16px;padding:16px 20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:28px;}
+        .avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--grass-dark),var(--grass));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+        .player-info-text h3{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;}
+        .player-info-text p{font-size:12px;color:var(--muted);margin-top:3px;}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:24px;}
+        .form-group{display:flex;flex-direction:column;gap:8px;}
+        .form-group label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;}
+        .form-group input,.form-group select{padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;transition:all .25s;outline:none;}
+        .form-group input:focus,.form-group select:focus{border-color:var(--grass);background:rgba(0,200,81,0.05);box-shadow:0 0 0 3px rgba(0,200,81,0.1);}
+        .form-group input::placeholder{color:#3d4f6a;}
+        .form-group select option{background:var(--surface2);}
+        .gk-section{display:none;}
+        .checkbox-group{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;cursor:pointer;}
+        .checkbox-group input[type=checkbox]{width:18px;height:18px;accent-color:var(--grass);cursor:pointer;}
+        .checkbox-group label{font-size:14px;cursor:pointer;}
+        .divider{border:none;border-top:1px solid var(--border);margin:24px 0;}
+        .btn-row{display:flex;gap:14px;align-items:center;}
+        .btn-save{padding:13px 32px;border-radius:8px;background:var(--grass);color:#061020;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .25s;}
+        .btn-save:hover{background:var(--grass-dark);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,200,81,0.3);}
+        .btn-discard{padding:13px 32px;border-radius:8px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--border);text-decoration:none;transition:all .25s;}
+        .btn-discard:hover{border-color:var(--muted);color:var(--white);}
+        .btn-delete{padding:13px 24px;border-radius:8px;background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .25s;margin-left:auto;}
+        .btn-delete:hover{background:var(--danger);color:white;}
+        .alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;border-left:3px solid;}
+        .alert-success{background:rgba(0,200,81,0.1);color:#69f0ae;border-color:var(--grass);}
+        .alert-danger{background:rgba(255,71,87,0.1);color:#ff6b6b;border-color:var(--danger);}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+<nav class="topbar">
+    <div style="display:flex;align-items:center">
+        <div class="topbar-logo">⚽ Thunder <span>FC</span></div>
+        <span class="role-chip">Coach</span>
+    </div>
+    <a href="{{ url_for('coach_dashboard') }}" class="btn-back">← Back to Dashboard</a>
+</nav>
+
+<div class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+        <h1>Edit Performance Record</h1>
+        <p>Record ID #{{ perf.id }} — update or delete this entry</p>
+    </div>
+
+    <div class="card">
+        {% set current_position = namespace(value='') %}
+        {% for player in players %}
+            {% if player.player_id == perf.player_id %}
+            <div class="player-info">
+                <div class="avatar">🏃</div>
+                <div class="player-info-text">
+                    <h3>{{ player.name }}</h3>
+                    <p>{{ player.position }} · {{ player.player_id }}</p>
+                </div>
+            </div>
+            {% set current_position.value = player.position %}
+            {% endif %}
+        {% endfor %}
+
+        <form method="POST" action="{{ url_for('edit_performance', perf_id=perf.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Match Date</label>
+                    <input type="date" name="match_date" value="{{ perf.match_date }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Minutes Played</label>
+                    <input type="number" name="minutes_played" value="{{ perf.minutes_played }}" min="0" max="120" required>
+                </div>
+                <div class="form-group">
+                    <label>Goals</label>
+                    <input type="number" name="goals" value="{{ perf.goals }}" min="0" max="20" required>
+                </div>
+                <div class="form-group">
+                    <label>Assists</label>
+                    <input type="number" name="assists" value="{{ perf.assists }}" min="0" max="20" required>
+                </div>
+                <div class="form-group">
+                    <label>Shots on Target</label>
+                    <input type="number" name="shots_on_target" value="{{ perf.shots_on_target }}" min="0" max="50" required>
+                </div>
+                <div class="form-group">
+                    <label>Pass Accuracy %</label>
+                    <input type="number" name="pass_accuracy" value="{{ perf.pass_accuracy }}" min="0" max="100" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Tackles</label>
+                    <input type="number" name="tackles" value="{{ perf.tackles }}" min="0" max="50" required>
+                </div>
+                {% if current_position.value == 'Goalkeeper' %}
+                <div class="form-group">
+                    <label>Saves (GK)</label>
+                    <input type="number" name="saves" value="{{ perf.saves }}" min="0" max="50">
+                </div>
+                {% endif %}
+            </div>
+
+            {% if current_position.value == 'Goalkeeper' %}
+            <div class="checkbox-group" style="margin-bottom:24px;max-width:260px;">
+                <input type="checkbox" name="clean_sheet" id="clean_sheet" {% if perf.clean_sheet %}checked{% endif %}>
+                <label for="clean_sheet">🧤 Clean Sheet</label>
+            </div>
+            {% endif %}
+
+            <hr class="divider">
+            <div class="btn-row">
+                <button type="submit" class="btn-save">💾 Save Changes</button>
+                <a href="{{ url_for('coach_dashboard') }}" class="btn-discard">Discard</a>
+            </div>
+        </form>
+
+        {# Delete form lives OUTSIDE the edit form — nested forms are invalid HTML #}
+        <form method="POST" action="{{ url_for('delete_performance', perf_id=perf.id) }}"
+              style="margin-top:12px;"
+              onsubmit="return confirm('Delete this performance record? This cannot be undone.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-delete">🗑 Delete Record</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

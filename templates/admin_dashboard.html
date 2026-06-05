@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — {{ team_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--pitch:#0a1628;--grass:#00c851;--grass-dark:#009c3b;--gold:#f5c518;--white:#f0f4ff;--muted:#8892a4;--surface:#111d30;--surface2:#172035;--border:rgba(255,255,255,0.07);--danger:#ff4757;--warning:#ffa502;--radius:12px;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--pitch);color:var(--white);min-height:100vh;}
+        .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+        .topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+        .topbar-logo span{color:var(--gold);}
+        .role-chip{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(245,197,24,0.15);color:var(--gold);font-weight:600;margin-left:14px;}
+        .btn-logout{padding:8px 20px;border-radius:8px;background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .25s;}
+        .btn-logout:hover{background:var(--danger);color:white;}
+        .main{max-width:1400px;margin:0 auto;padding:32px 24px;}
+        .page-header{margin-bottom:32px;animation:fadeUp .4s ease both;}
+        .page-header h1{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:2px;}
+        .page-header p{color:var(--muted);margin-top:4px;font-size:14px;}
+        .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px;}
+        .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;text-align:center;transition:transform .25s,border-color .25s;animation:fadeUp .4s ease both;}
+        .kpi-card:hover{transform:translateY(-4px);border-color:rgba(0,200,81,0.3);}
+        .kpi-card .kpi-val{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--grass);line-height:1;margin:8px 0 4px;}
+        .kpi-card .kpi-lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+        .kpi-card .kpi-icon{font-size:24px;}
+        .ml-banner{background:linear-gradient(135deg,#0d2240 0%,#0d3320 100%);border:1px solid rgba(0,200,81,0.2);border-radius:var(--radius);padding:32px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:24px;animation:fadeUp .4s ease both;position:relative;overflow:hidden;}
+        .ml-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--grass),var(--gold));}
+        .ml-info h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;margin-bottom:8px;}
+        .ml-info p{color:var(--muted);font-size:13px;line-height:1.6;}
+        .ml-accuracy{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--grass);line-height:1;}
+        .ml-details{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;}
+        /* ── Train button now links to confirmation page ── */
+        .btn-train{padding:12px 28px;border-radius:8px;background:var(--grass);color:#061020;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .25s;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;display:inline-block;}
+        .btn-train:hover{background:var(--grass-dark);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,200,81,0.3);}
+        .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:28px;animation:fadeUp .4s ease both;}
+        .section-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:22px;}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-bottom:20px;}
+        .form-group{display:flex;flex-direction:column;gap:8px;}
+        .form-group label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;}
+        .form-group input,.form-group select{padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;transition:all .25s;outline:none;}
+        .form-group input:focus,.form-group select:focus{border-color:var(--grass);background:rgba(0,200,81,0.05);box-shadow:0 0 0 3px rgba(0,200,81,0.1);}
+        .form-group input::placeholder{color:#3d4f6a;}
+        .form-group select option{background:var(--surface2);}
+        .btn-primary{padding:12px 28px;border-radius:8px;background:linear-gradient(135deg,#1a3a6b,#2a5a9b);color:var(--white);border:1px solid rgba(100,149,237,0.3);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .25s;}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(100,149,237,0.2);}
+        .table-wrap{overflow-x:auto;}
+        table{width:100%;border-collapse:collapse;}
+        thead tr{border-bottom:1px solid var(--border);}
+        th{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:10px 14px;text-align:left;}
+        td{padding:14px;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03);}
+        tbody tr{transition:background .2s;}
+        tbody tr:hover{background:rgba(255,255,255,0.03);}
+        .badge{padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;}
+        .badge-admin{background:rgba(245,197,24,0.15);color:var(--gold);}
+        .badge-coach{background:rgba(0,200,81,0.15);color:var(--grass);}
+        .badge-player{background:rgba(100,149,237,0.15);color:#6495ed;}
+        .btn-delete{padding:6px 16px;border-radius:6px;background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;}
+        .btn-delete:hover{background:var(--danger);color:white;}
+        .alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;border-left:3px solid;animation:fadeUp .4s ease both;}
+        .alert-success{background:rgba(0,200,81,0.1);color:#69f0ae;border-color:var(--grass);}
+        .alert-danger{background:rgba(255,71,87,0.1);color:#ff6b6b;border-color:var(--danger);}
+        .alert-warning{background:rgba(255,165,0,0.1);color:#ffb74d;border-color:var(--warning);}
+        .alert-info{background:rgba(100,149,237,0.1);color:#90caf9;border-color:#6495ed;}
+        .tabs{display:flex;gap:0;margin-bottom:22px;background:rgba(255,255,255,0.03);border-radius:8px;padding:4px;border:1px solid var(--border);width:fit-content;}
+        .tab-btn{padding:8px 22px;border-radius:6px;background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+        .tab-btn.active{background:var(--surface2);color:var(--white);}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+<nav class="topbar">
+    <div style="display:flex;align-items:center">
+        <div class="topbar-logo">⚽ Thunder <span>FC</span></div>
+        <span class="role-chip">Admin</span>
+    </div>
+    <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+</nav>
+
+<div class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+
+    {% if training_running %}
+    <div class="alert alert-info" id="training-banner">
+        ⏳ <strong>Model training is running in the background…</strong>
+        Results will appear here automatically when complete.
+        <span id="training-dots">.</span>
+    </div>
+    {% endif %}
+
+    <div class="page-header">
+        <h1>System Administration</h1>
+        <p>Manage players, users, and AI models</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon">🏃</div><div class="kpi-val">{{ players|length }}</div><div class="kpi-lbl">Players</div></div>
+        <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-val">{{ users|length }}</div><div class="kpi-lbl">Users</div></div>
+        <div class="kpi-card"><div class="kpi-icon">⚽</div><div class="kpi-val" style="font-size:22px;padding-top:8px">{{ team_name }}</div><div class="kpi-lbl">Team</div></div>
+    </div>
+
+    <!-- ML Banner — train now goes to confirmation page -->
+    <div class="ml-banner">
+        <div class="ml-info">
+            <h3>🤖 AI Performance Models</h3>
+            <p>Time-series forecasting models — predict next match from last 3 match history<br>Forward • Midfielder • Defender • Goalkeeper</p>
+            {% if model_accuracy %}
+            <div class="ml-details">
+                {% for line in model_accuracy.split('\n') %}{% if line %}{{ line }}<br>{% endif %}{% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--muted);font-size:12px;margin-top:8px">No models trained yet. Add at least 10 match records to train.</p>
+            {% endif %}
+        </div>
+        {% if model_accuracy %}
+        <div style="text-align:center">
+            <div class="ml-accuracy">{{ model_accuracy.split('%')[0].split(' ')[-1] }}%</div>
+            <div style="font-size:12px;color:var(--muted)">avg accuracy</div>
+        </div>
+        {% endif %}
+        <!-- ── GET request goes to confirm page (NEW) ── -->
+        <a href="{{ url_for('train_model') }}" class="btn-train">
+            {% if model_accuracy %}Retrain Models{% else %}Train Models{% endif %}
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event,'players')">👥 Players</button>
+            <button class="tab-btn" onclick="switchTab(event,'users')">👤 User Accounts</button>
+            <button class="tab-btn" onclick="switchTab(event,'add')">➕ Add Player</button>
+        </div>
+
+        <div class="tab-content active" id="tab-players">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>ID</th><th>Name</th><th>Position</th><th>Age</th><th>Team</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for player in players %}
+                        <tr>
+                            <td style="color:var(--muted);font-family:monospace">{{ player.player_id }}</td>
+                            <td><strong>{{ player.name }}</strong></td>
+                            <td><span class="badge" style="background:rgba(0,200,81,0.1);color:var(--grass)">{{ player.position }}</span></td>
+                            <td>{{ player.age }}</td>
+                            <td style="color:var(--muted)">{{ player.team }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_player', player_id=player.player_id) }}" style="display:inline" onsubmit="return confirm('Delete {{ player.name }}? This will also remove all their match records and login account.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-delete">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-users">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Username</th><th>Role</th><th>Player ID</th></tr></thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+                            <td style="color:var(--muted);font-family:monospace">{{ user.player_id if user.player_id else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-add">
+            <div style="background:rgba(0,200,81,0.05);border:1px solid rgba(0,200,81,0.15);border-radius:8px;padding:14px 18px;margin-bottom:22px;font-size:13px;color:var(--muted);">
+                🤖 <strong style="color:var(--grass)">Player ID is auto-generated</strong> — the next available ID (P021, P022 …) is assigned automatically.
+            </div>
+            <form method="POST" action="{{ url_for('add_player') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-grid">
+                    <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="e.g., Alex Martinez"></div>
+                    <div class="form-group">
+                        <label>Position</label>
+                        <select name="position" required>
+                            <option value="">Select position</option>
+                            <option value="Forward">Forward</option>
+                            <option value="Midfielder">Midfielder</option>
+                            <option value="Defender">Defender</option>
+                            <option value="Goalkeeper">Goalkeeper</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Age</label><input type="number" name="age" required min="16" max="45" placeholder="e.g., 23"></div>
+                    <div class="form-group"><label>Login Username</label><input type="text" name="username" required placeholder="e.g., alex_m"></div>
+                    <div class="form-group"><label>Login Password</label><input type="password" name="password" required placeholder="Min 6 characters"></div>
+                </div>
+                <button type="submit" class="btn-primary">Add Player &amp; Create Account</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(e,name){
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById('tab-'+name).classList.add('active');
+    }
+</script>
+
+<script>
+{% if training_running %}
+(function() {
+    const banner = document.getElementById('training-banner');
+    const dots   = document.getElementById('training-dots');
+    let   n = 0;
+    const timer = setInterval(async () => {
+        n++;
+        if (dots) dots.textContent = '.'.repeat((n % 3) + 1);
+        try {
+            const res  = await fetch('/api/training_status');
+            const data = await res.json();
+            if (!data.running) {
+                clearInterval(timer);
+                location.reload();
+            }
+        } catch(e) {}
+    }, 3000);
+})();
+{% endif %}
+</script>
+
+</body>
+</html>

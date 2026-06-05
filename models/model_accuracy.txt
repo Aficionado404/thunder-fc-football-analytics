@@ -1,0 +1,5 @@
+Forecasting Accuracy: 87.5%
+Forward: 89.0% holdout accuracy (271 train / 73 test rows, per-player split)
+Midfielder: 84.7% holdout accuracy (270 train / 72 test rows, per-player split)
+Defender: 93.1% holdout accuracy (271 train / 72 test rows, per-player split)
+Goalkeeper: 83.3% holdout accuracy (90 train / 24 test rows, per-player split)

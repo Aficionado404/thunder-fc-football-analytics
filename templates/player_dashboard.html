@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Dashboard — {{ team_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --pitch:#0a1628;--grass:#00c851;--grass-dark:#009c3b;--gold:#f5c518;
+            --white:#f0f4ff;--muted:#8892a4;--surface:#111d30;--surface2:#172035;
+            --border:rgba(255,255,255,0.07);--danger:#ff4757;--warning:#ffa502;--radius:12px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--pitch);color:var(--white);min-height:100vh;}
+        .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+        .topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+        .topbar-logo span{color:var(--grass);}
+        .role-chip{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(100,149,237,0.15);color:#6495ed;font-weight:600;margin-left:14px;}
+        .topbar-right{display:flex;align-items:center;gap:12px;}
+        .btn-logout{padding:8px 20px;border-radius:8px;background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .25s;}
+        .btn-logout:hover{background:var(--danger);color:white;}
+        .main{max-width:1280px;margin:0 auto;padding:32px 24px;}
+        .hero-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:28px;display:flex;align-items:center;gap:32px;position:relative;overflow:hidden;animation:slideDown .5s ease both;}
+        .hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--grass),var(--gold));}
+        .hero-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--grass-dark),var(--grass));display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;}
+        .hero-info h1{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;}
+        .hero-meta{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
+        .badge{padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.5px;}
+        .badge-pos{background:rgba(0,200,81,0.15);color:var(--grass);border:1px solid rgba(0,200,81,0.2);}
+        .badge-cond-green,.badge-rating-excellent{background:rgba(0,200,81,0.15);color:#69f0ae;border:1px solid rgba(0,200,81,0.2);}
+        .badge-cond-blue,.badge-rating-good{background:rgba(100,149,237,0.15);color:#90caf9;border:1px solid rgba(100,149,237,0.2);}
+        .badge-cond-orange,.badge-rating-average{background:rgba(255,165,0,0.15);color:#ffb74d;border:1px solid rgba(255,165,0,0.2);}
+        .badge-cond-red,.badge-rating-poor{background:rgba(255,71,87,0.15);color:#ff6b6b;border:1px solid rgba(255,71,87,0.2);}
+        .badge-cond-gray{background:rgba(130,130,130,0.15);color:#aaa;border:1px solid rgba(130,130,130,0.2);}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:28px;}
+        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;text-align:center;transition:transform .25s,border-color .25s;animation:fadeUp .5s ease both;}
+        .stat-card:hover{transform:translateY(-4px);border-color:rgba(0,200,81,0.3);}
+        .stat-card .stat-val{font-family:'Bebas Neue',sans-serif;font-size:44px;color:var(--grass);line-height:1;margin:8px 0 4px;}
+        .stat-card .stat-lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:500;}
+        .stat-card .stat-icon{font-size:22px;}
+        .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:24px;animation:fadeUp .5s ease both;}
+        .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+        .section-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;display:flex;align-items:center;gap:10px;}
+        .score-display{display:flex;align-items:baseline;gap:12px;}
+        .score-num{font-family:'Bebas Neue',sans-serif;font-size:56px;color:var(--gold);line-height:1;}
+        .chart-wrap{height:340px;position:relative;}
+        .suggestion-item{padding:14px 16px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);margin-bottom:10px;font-size:14px;line-height:1.5;transition:all .25s;}
+        .suggestion-item:hover{background:rgba(0,200,81,0.05);border-color:rgba(0,200,81,0.2);transform:translateX(4px);}
+        .alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;border-left:3px solid;}
+        .alert-success{background:rgba(0,200,81,0.1);color:#69f0ae;border-color:var(--grass);}
+        .alert-danger{background:rgba(255,71,87,0.1);color:#ff6b6b;border-color:var(--danger);}
+        .alert-warning{background:rgba(255,165,0,0.1);color:#ffb74d;border-color:var(--warning);}
+        .alert-info{background:rgba(100,149,237,0.1);color:#90caf9;border-color:#6495ed;}
+        /* ── Match History Table ── */
+        .table-wrap{overflow-x:auto;}
+        table{width:100%;border-collapse:collapse;}
+        thead tr{border-bottom:1px solid var(--border);}
+        th{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:10px 14px;text-align:left;}
+        td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);}
+        tbody tr{transition:background .2s;}
+        tbody tr:hover{background:rgba(255,255,255,0.025);}
+        .rating-pill{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+        .rating-Excellent{background:rgba(0,200,81,0.15);color:#69f0ae;}
+        .rating-Good{background:rgba(100,149,237,0.15);color:#90caf9;}
+        .rating-Average{background:rgba(255,165,0,0.15);color:#ffb74d;}
+        .rating-Poor{background:rgba(255,71,87,0.15);color:#ff6b6b;}
+        .no-data{text-align:center;padding:80px 20px;}
+        .no-data .icon{font-size:60px;margin-bottom:20px;}
+        .no-data h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--muted);}
+        .no-data p{color:var(--muted);margin-top:8px;}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    
+        /* ── Pagination ── */
+        .pagination { display:flex; align-items:center; gap:8px; justify-content:center; margin-top:24px; }
+        .page-btn { padding:7px 16px; border-radius:8px; border:1px solid var(--border);
+                    background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif;
+                    font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:all .2s; }
+        .page-btn:hover { border-color:var(--grass); color:var(--grass); }
+        .page-btn.active { background:var(--grass); border-color:var(--grass); color:#061020; }
+        .page-btn.disabled { opacity:0.3; pointer-events:none; }
+        .page-info { font-size:12px; color:var(--muted); }
+
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+<nav class="topbar">
+    <div style="display:flex;align-items:center">
+        <div class="topbar-logo">⚽ Thunder <span>FC</span></div>
+        <span class="role-chip">Player</span>
+    </div>
+    <div class="topbar-right">
+        <span style="color:var(--muted);font-size:13px">{{ session.username }}</span>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    {% if stats %}
+    <!-- Hero -->
+    <div class="hero-card">
+        <div class="hero-avatar">🏃</div>
+        <div class="hero-info">
+            <h1>{{ stats.name }}</h1>
+            <div class="hero-meta">
+                <span class="badge badge-pos">{{ stats.position }}</span>
+                <span class="badge badge-rating-{{ stats.performance_rating.lower() }}">Rating: {{ stats.performance_rating }}</span>
+                <span class="badge badge-cond-{{ stats.condition_color }}">Form: {{ stats.condition }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card" style="animation-delay:.05s"><div class="stat-icon">🎯</div><div class="stat-val">{{ stats.total_matches }}</div><div class="stat-lbl">Matches</div></div>
+        <div class="stat-card" style="animation-delay:.10s"><div class="stat-icon">⚽</div><div class="stat-val">{{ stats.total_goals }}</div><div class="stat-lbl">Goals</div></div>
+        <div class="stat-card" style="animation-delay:.15s"><div class="stat-icon">🤝</div><div class="stat-val">{{ stats.total_assists }}</div><div class="stat-lbl">Assists</div></div>
+        <div class="stat-card" style="animation-delay:.20s"><div class="stat-icon">🎯</div><div class="stat-val">{{ stats.avg_pass_accuracy }}%</div><div class="stat-lbl">Pass Acc.</div></div>
+        {% if stats.position == 'Goalkeeper' %}
+        <div class="stat-card" style="animation-delay:.25s"><div class="stat-icon">🧤</div><div class="stat-val">{{ stats.total_saves }}</div><div class="stat-lbl">Saves</div></div>
+        {% else %}
+        <div class="stat-card" style="animation-delay:.25s"><div class="stat-icon">🛡️</div><div class="stat-val">{{ stats.total_tackles }}</div><div class="stat-lbl">Tackles</div></div>
+        {% endif %}
+    </div>
+
+    <!-- Score -->
+    <div class="section" style="animation-delay:.2s">
+        <div class="section-header">
+            <div class="section-title">📊 Performance Score</div>
+            <span class="badge badge-rating-{{ stats.performance_rating.lower() }}">{{ stats.performance_rating }}</span>
+        </div>
+        <div class="score-display">
+            <div class="score-num" id="scoreCounter">{{ stats.avg_performance_score }}</div>
+            <div style="color:var(--muted);font-size:13px;padding-bottom:8px;">avg. score per match</div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="section" style="animation-delay:.25s">
+        <div class="section-header"><div class="section-title">📈 Performance Trend</div></div>
+        <div class="chart-wrap"><canvas id="performanceChart"></canvas></div>
+    </div>
+
+    <!-- ── PERFORMANCE INTELLIGENCE + INSIGHTS (merged) ── -->
+    {% if stats.ml_insight %}
+    {% set ml = stats.ml_insight %}
+    {% set rating = ml.predicted_rating %}
+    {% if rating == 'Excellent' %}
+        {% set ml_rgb = '0,200,81' %}{% set ml_hex = '#00c851' %}{% set ml_cls = 'badge-rating-excellent' %}
+    {% elif rating == 'Good' %}
+        {% set ml_rgb = '100,149,237' %}{% set ml_hex = '#6495ed' %}{% set ml_cls = 'badge-rating-good' %}
+    {% elif rating == 'Average' %}
+        {% set ml_rgb = '255,165,0' %}{% set ml_hex = '#ffa502' %}{% set ml_cls = 'badge-rating-average' %}
+    {% else %}
+        {% set ml_rgb = '255,71,87' %}{% set ml_hex = '#ff4757' %}{% set ml_cls = 'badge-rating-poor' %}
+    {% endif %}
+
+    <div class="section" style="animation-delay:.3s;border-color:rgba({{ ml_rgb }},0.3);padding:0;overflow:hidden;">
+
+        <!-- ── Section title bar ── -->
+        <div style="padding:18px 28px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div class="section-title" style="margin:0;">📡 Performance Intelligence</div>
+            <span style="font-size:11px;color:var(--muted)">Based on last {{ ml.window }} matches</span>
+        </div>
+
+        <!-- ── TOP: Prediction card — full width, prominent ── -->
+        <div style="padding:20px 28px;background:rgba({{ ml_rgb }},0.06);border-bottom:1px solid rgba({{ ml_rgb }},0.18);display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+
+            <!-- Left: Rating + confidence -->
+            <div style="display:flex;align-items:center;gap:20px;">
+                <div>
+                    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba({{ ml_rgb }},0.7);margin-bottom:4px;">Next Match Prediction</div>
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:42px;color:{{ ml_hex }};line-height:1;letter-spacing:2px;">{{ rating }}</div>
+                </div>
+                <div style="border-left:1px solid rgba({{ ml_rgb }},0.2);padding-left:20px;">
+                    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Confidence</div>
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:{{ ml_hex }};line-height:1;">{{ ml.confidence }}%</div>
+                    <div style="background:rgba(255,255,255,0.08);border-radius:3px;height:4px;width:80px;margin-top:6px;overflow:hidden;">
+                        <div style="height:100%;width:{{ ml.confidence }}%;background:{{ ml_hex }};border-radius:3px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Outlook sentence + trajectory -->
+            <div style="flex:1;min-width:200px;">
+                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba({{ ml_rgb }},0.7);margin-bottom:6px;">Outlook</div>
+                <div style="font-size:15px;color:var(--white);font-weight:600;line-height:1.5;margin-bottom:8px;">{{ ml.outlook }}</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:18px;color:{% if ml.trajectory=='rising' %}#00c851{% elif ml.trajectory=='declining' %}#ff4757{% else %}#6495ed{% endif %};">
+                        {% if ml.trajectory=='rising' %}↑{% elif ml.trajectory=='declining' %}↓{% else %}→{% endif %}
+                    </span>
+                    <span style="font-size:12px;color:var(--muted);">
+                        {% if ml.trajectory=='rising' %}Form rising +{{ ml.trend_pct }}% vs previous 5 matches
+                        {% elif ml.trajectory=='declining' %}Form declining −{{ ml.trend_pct }}% vs previous 5 matches
+                        {% elif ml.trajectory=='stable' %}Form stable across last 10 matches
+                        {% else %}Not enough data to establish trend{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── BOTTOM: Two-column detail ── -->
+        <div style="padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+            <!-- Left: Focus area + coaching tips -->
+            <div>
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Coaching Focus</div>
+
+                <!-- Priority focus box -->
+                <div style="background:rgba({{ ml_rgb }},0.05);border:1px solid rgba({{ ml_rgb }},0.2);border-radius:8px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba({{ ml_rgb }},0.8);margin-bottom:5px;">Priority This Week</div>
+                    <div style="font-size:12px;font-weight:600;color:var(--white);margin-bottom:4px;">{{ ml.weakest_label }}</div>
+                    <div style="font-size:12px;color:var(--muted);line-height:1.5;">{{ ml.coaching_tip }}</div>
+                </div>
+
+                <!-- Recent form insights (rule-based) -->
+                {% if stats.suggestions %}
+                <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recent Form Alerts</div>
+                {% for s in stats.suggestions %}
+                <div class="suggestion-item" style="animation-delay:{{ loop.index * 0.05 }}s">{{ s }}</div>
+                {% endfor %}
+                {% endif %}
+
+                <!-- Last 5 vs prev 5 avg boxes -->
+                {% if ml.prev_avg %}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
+                    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Last 5 Avg</div>
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:{{ ml_hex }};">{{ ml.recent_avg }}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Prev 5 Avg</div>
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--muted);">{{ ml.prev_avg }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right: Rolling avg stat bars -->
+            <div>
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Avg Over Last {{ ml.window }} Matches</div>
+                <div style="display:grid;gap:14px;">
+                    {% for label, val, pct in ml.features %}
+                    {% set is_weakest = (label == ml.weakest_label) %}
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                            <span style="font-size:12px;color:{% if is_weakest %}{{ ml_hex }}{% else %}var(--muted){% endif %};font-weight:{% if is_weakest %}600{% else %}400{% endif %};">
+                                {{ label }}{% if is_weakest %} ←{% endif %}
+                            </span>
+                            <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:{% if is_weakest %}{{ ml_hex }}{% else %}var(--white){% endif %};">{{ val }}</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="height:100%;width:{{ pct }}%;background:{% if is_weakest %}{{ ml_hex }}{% else %}rgba({{ ml_rgb }},0.4){% endif %};border-radius:4px;transition:width .6s ease;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Fallback: no ML model trained yet -->
+    <div class="section" style="animation-delay:.3s;border-color:rgba(255,165,0,0.2);">
+        <div class="section-header">
+            <div class="section-title">💡 Improvement Insights</div>
+            <span style="font-size:12px;color:var(--muted)">Based on recent matches</span>
+        </div>
+        {% for suggestion in stats.suggestions %}
+        <div class="suggestion-item" style="animation-delay:{{ loop.index * 0.07 }}s">{{ suggestion }}</div>
+        {% endfor %}
+        <div style="margin-top:14px;padding:12px 16px;background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.2);border-radius:8px;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:22px;">🤖</span>
+            <div>
+                <div style="font-size:12px;font-weight:600;color:#ffb74d;margin-bottom:3px;">Next-Match Prediction Unavailable</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5;">The forecasting model hasn't been trained yet. Ask your admin to go to the Admin Dashboard and click Train Models.</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── MATCH HISTORY TABLE (NEW) ── -->
+    {% if match_history %}
+    <div class="section" style="animation-delay:.35s">
+        <div class="section-header">
+            <div class="section-title">📋 Match History</div>
+            <span style="font-size:12px;color:var(--muted)">{{ match_history|length }} matches played</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Mins</th>
+                        <th>Goals</th>
+                        <th>Assists</th>
+                        <th>Shots</th>
+                        <th>Pass %</th>
+                        {% if stats.position == 'Goalkeeper' %}
+                        <th>Saves</th>
+                        <th>Clean Sheet</th>
+                        {% else %}
+                        <th>Tackles</th>
+                        {% endif %}
+                        <th>Score</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in match_history %}
+                    <tr>
+                        <td style="color:var(--muted)">{{ m.match_num }}</td>
+                        <td>{{ m.match_date }}</td>
+                        <td>{{ m.minutes_played }}</td>
+                        <td><strong style="color:var(--gold)">{{ m.goals }}</strong></td>
+                        <td>{{ m.assists }}</td>
+                        <td>{{ m.shots_on_target }}</td>
+                        <td>{{ m.pass_accuracy }}%</td>
+                        {% if stats.position == 'Goalkeeper' %}
+                        <td>{{ m.saves }}</td>
+                        <td>{% if m.clean_sheet %}✅{% else %}—{% endif %}</td>
+                        {% else %}
+                        <td>{{ m.tackles }}</td>
+                        {% endif %}
+                        <td><strong style="color:var(--grass)">{{ m.score }}</strong></td>
+                        <td><span class="rating-pill rating-{{ m.rating }}">{{ m.rating }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            <a href="?page={{ page - 1 }}" class="page-btn {% if page <= 1 %}disabled{% endif %}">← Prev</a>
+            {% for p in range(1, total_pages + 1) %}
+                <a href="?page={{ p }}" class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            <a href="?page={{ page + 1 }}" class="page-btn {% if page >= total_pages %}disabled{% endif %}">Next →</a>
+        </div>
+        <div class="pagination" style="margin-top:8px">
+            <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
+        </div>
+        {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="no-data">
+        <div class="icon">⚽</div>
+        <h2>No Performance Data Yet</h2>
+        <p>Your coach hasn't recorded any match data yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if stats %}
+<script>
+    // FIX: use shared ThunderFC.animateCounter from custom.js instead of
+    // duplicating the logic. Element already pre-filled with final value so
+    // there is no 0-flash even before JS runs.
+    window.addEventListener('load', () => {
+        const el = document.getElementById('scoreCounter');
+        ThunderFC.animateCounter(el, {{ stats.avg_performance_score }}, 2, 1200);
+    });
+    fetch('/api/player_performance/{{ player_id }}').then(r=>r.json()).then(data=>{
+        const ctx=document.getElementById('performanceChart').getContext('2d');
+        new Chart(ctx,{
+            type:'line',
+            data:{
+                labels:data.labels,
+                datasets:[
+                    {label:'Performance Score',data:data.scores,borderColor:'#00c851',backgroundColor:'rgba(0,200,81,0.08)',tension:0.4,fill:true,borderWidth:2.5,pointBackgroundColor:'#00c851',pointRadius:5,pointHoverRadius:7},
+                    {label:'Goals',data:data.goals,borderColor:'#f5c518',backgroundColor:'rgba(245,197,24,0.05)',tension:0.4,fill:false,borderWidth:2,pointBackgroundColor:'#f5c518',pointRadius:4,pointHoverRadius:6},
+                    {label:'Pass Accuracy %',data:data.pass_accuracy,borderColor:'#6495ed',backgroundColor:'rgba(100,149,237,0.05)',tension:0.4,fill:false,borderWidth:2,pointBackgroundColor:'#6495ed',pointRadius:4,pointHoverRadius:6}
+                ]
+            },
+            options:{
+                responsive:true,maintainAspectRatio:false,
+                plugins:{
+                    legend:{labels:{color:'#8892a4',font:{family:'DM Sans',size:12},padding:20,usePointStyle:true}},
+                    tooltip:{backgroundColor:'#172035',borderColor:'rgba(255,255,255,0.07)',borderWidth:1,titleColor:'#f0f4ff',bodyColor:'#8892a4',padding:12,cornerRadius:8}
+                },
+                scales:{
+                    x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'DM Sans',size:11}}},
+                    y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8892a4',font:{family:'DM Sans',size:11}},beginAtZero:true}
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+</body>
+</html>

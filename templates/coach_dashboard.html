@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach Dashboard — {{ team_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+
+        :root {
+            --pitch: #0a1628; --grass: #00c851; --grass-dark: #009c3b; --gold: #f5c518;
+            --white: #f0f4ff; --muted: #8892a4; --surface: #111d30; --surface2: #172035;
+            --border: rgba(255,255,255,0.07); --danger: #ff4757; --warning: #ffa502; --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--pitch); color: var(--white); min-height: 100vh; }
+
+        /* ── Topbar ── */
+        .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .topbar-logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; }
+        .topbar-logo span { color: var(--grass); }
+        .role-chip { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; background: rgba(0,200,81,0.15); color: var(--grass); font-weight: 600; margin-left: 14px; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .btn-add { padding: 9px 22px; border-radius: 8px; background: var(--grass); color: #061020; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; }
+        .btn-add:hover { background: var(--grass-dark); transform: translateY(-1px); }
+        .btn-logout { padding: 8px 20px; border-radius: 8px; background: rgba(255,71,87,0.1); color: var(--danger); border: 1px solid rgba(255,71,87,0.2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .25s; }
+        .btn-logout:hover { background: var(--danger); color: white; }
+
+        /* ── Layout ── */
+        .main { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
+        .page-header { margin-bottom: 28px; animation: fadeUp .4s ease both; }
+        .page-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 2px; }
+        .page-header p { color: var(--muted); margin-top: 4px; font-size: 14px; }
+
+        /* ── Alerts ── */
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; border-left: 3px solid; }
+        .alert-success { background: rgba(0,200,81,0.1); color: #69f0ae; border-color: var(--grass); }
+        .alert-danger  { background: rgba(255,71,87,0.1); color: #ff6b6b; border-color: var(--danger); }
+        .alert-info    { background: rgba(100,149,237,0.1); color: #90caf9; border-color: #6495ed; }
+        .alert-warning { background: rgba(255,165,0,0.1); color: #ffb74d; border-color: var(--warning); }
+
+        /* ── Section ── */
+        .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 28px; animation: fadeUp .4s ease both; }
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+
+        /* ── Top Performers ── */
+        .top-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .top-card { background: var(--surface2); border: 1px solid rgba(245,197,24,0.2); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; animation: fadeUp .4s ease both; }
+        .top-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--grass)); }
+        .top-card .pos-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+        .top-card .top-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.5px; line-height: 1.2; }
+        .top-card .top-score { font-family: 'Bebas Neue', sans-serif; font-size: 40px; color: var(--gold); line-height: 1; margin-top: 8px; }
+        .top-card .top-score-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+
+        /* ── Position Filter ── */
+        .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+        .filter-bar span { font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+        .filter-btn { padding: 6px 18px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .2s; }
+        .filter-btn:hover { border-color: var(--grass); color: var(--grass); }
+        .filter-btn.active { background: var(--grass); border-color: var(--grass); color: #061020; }
+
+        /* ── Squad Summary Table ── */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { border-bottom: 1px solid var(--border); }
+        th { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 14px; text-align: left; white-space: nowrap; }
+        td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        tbody tr { transition: background .2s; cursor: pointer; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .player-name-cell { display: flex; align-items: center; gap: 10px; }
+        .avatar-sm { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--grass-dark), var(--grass)); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+
+        /* ── Badges ── */
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .badge-excellent { background: rgba(0,200,81,0.15); color: #69f0ae; }
+        .badge-good      { background: rgba(100,149,237,0.15); color: #90caf9; }
+        .badge-average   { background: rgba(255,165,0,0.15); color: #ffb74d; }
+        .badge-poor      { background: rgba(255,71,87,0.15); color: #ff6b6b; }
+        .badge-green  { background: rgba(0,200,81,0.15); color: #69f0ae; }
+        .badge-blue   { background: rgba(100,149,237,0.15); color: #90caf9; }
+        .badge-orange { background: rgba(255,165,0,0.15); color: #ffb74d; }
+        .badge-red    { background: rgba(255,71,87,0.15); color: #ff6b6b; }
+        .badge-gray   { background: rgba(130,130,130,0.15); color: #aaa; }
+
+        /* ── Player detail cards ── */
+        .player-cards { display: grid; gap: 24px; }
+        .player-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .3s; }
+        .player-card:hover { border-color: rgba(0,200,81,0.2); }
+
+        .card-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(255,255,255,0.02); }
+        .card-header-left { display: flex; align-items: center; gap: 14px; }
+        .card-header h3 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1.5px; }
+        .card-header-badges { display: flex; gap: 7px; margin-top: 6px; flex-wrap: wrap; }
+
+        .card-body { padding: 24px; }
+
+        /* ── Mini stats row ── */
+        .mini-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 22px; }
+        .mini-stat { text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border); }
+        .mini-stat .val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--grass); }
+        .mini-stat .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+        /* ── Chart + Suggestions row ── */
+        .chart-row { display: grid; grid-template-columns: 1fr 380px; gap: 18px; align-items: start; margin-bottom: 22px; }
+        .chart-box { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 14px; height: 240px; position: relative; }
+        .suggestions-box { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 16px; }
+        .suggestions-box h5 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+        .suggestion-item { font-size: 12px; color: var(--white); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; background: rgba(0,200,81,0.04); border-left: 2px solid rgba(0,200,81,0.3); line-height: 1.5; }
+
+        /* ── Match history inside card ── */
+        .match-history-section { margin-top: 4px; }
+        .match-history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .match-history-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+        .btn-add-match { padding: 5px 14px; border-radius: 6px; background: var(--grass); color: #061020; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; text-decoration: none; transition: all .2s; white-space: nowrap; }
+        .btn-add-match:hover { background: var(--grass-dark); }
+
+        .history-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .history-table thead tr { background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+        .history-table th { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 12px; text-align: left; white-space: nowrap; }
+        .history-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.025); color: var(--white); white-space: nowrap; }
+        .history-table tbody tr:last-child td { border-bottom: none; }
+        .history-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+        /* rating pills */
+        .rating-pill { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+        .rating-Excellent { background: rgba(0,200,81,0.15); color: #69f0ae; }
+        .rating-Good      { background: rgba(100,149,237,0.15); color: #90caf9; }
+        .rating-Average   { background: rgba(255,165,0,0.15); color: #ffb74d; }
+        .rating-Poor      { background: rgba(255,71,87,0.15); color: #ff6b6b; }
+
+        /* action buttons inside table */
+        .tbl-btn-edit { padding: 4px 10px; border-radius: 5px; background: rgba(100,149,237,0.12); color: #90caf9; border: 1px solid rgba(100,149,237,0.2); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; text-decoration: none; transition: all .2s; display: inline-block; }
+        .tbl-btn-edit:hover { background: #6495ed; color: white; }
+        .tbl-btn-del  { padding: 4px 10px; border-radius: 5px; background: rgba(255,71,87,0.1); color: var(--danger); border: 1px solid rgba(255,71,87,0.2); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; text-decoration: none; transition: all .2s; display: inline-block; }
+        .tbl-btn-del:hover  { background: var(--danger); color: white; }
+        .actions-cell { display: flex; gap: 5px; }
+
+        /* show/hide toggle */
+        .toggle-history { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: all .2s; }
+        .toggle-history:hover { border-color: var(--grass); color: var(--grass); }
+
+        .history-body { display: none; }
+        .history-body.open { display: block; }
+
+        /* empty / no history */
+        .no-history { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+
+        /* empty filter state */
+        .empty-filter { text-align: center; padding: 60px; color: var(--muted); }
+        .empty-filter .big { font-size: 48px; margin-bottom: 12px; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .card-header { flex-direction: column; align-items: flex-start; } }
+    
+
+        /* ── Main tab nav ── */
+        .main-tabs{display:flex;gap:0;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:28px;animation:fadeUp .4s ease both;}
+        .main-tab{padding:10px 26px;border-radius:7px;background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:8px;}
+        .main-tab:hover{color:var(--white);}
+        .main-tab.active{background:var(--surface2);color:var(--white);}
+        .tab-pane{display:none;}
+        .tab-pane.active{display:block;animation:fadeUp .35s ease both;}
+
+        /* ── Compare tab ── */
+        .cmp-pos-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+        .cmp-pos-tab{padding:6px 18px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+        .cmp-pos-tab:hover{border-color:var(--grass);color:var(--grass);}
+        .cmp-pos-tab.active{background:var(--grass);border-color:var(--grass);color:#061020;}
+        .cmp-player-grid{display:flex;flex-wrap:wrap;gap:10px;min-height:60px;}
+        .player-chip{padding:10px 16px;border-radius:10px;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);cursor:pointer;transition:all .2s;user-select:none;display:flex;align-items:center;gap:10px;}
+        .player-chip:hover{border-color:rgba(0,200,81,0.4);background:rgba(0,200,81,0.05);}
+        .player-chip.sel-0{border-color:var(--grass);background:rgba(0,200,81,0.1);}
+        .player-chip.sel-1{border-color:var(--gold);background:rgba(245,197,24,0.1);}
+        .player-chip.sel-2{border-color:#6495ed;background:rgba(100,149,237,0.1);}
+        .chip-name{font-size:13px;font-weight:600;}
+        .chip-score{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--grass);}
+        .chip-form{display:flex;gap:3px;margin-top:3px;}
+        .form-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+        .fd-Excellent{background:#00c851;} .fd-Good{background:#6495ed;} .fd-Average{background:#ffa502;} .fd-Poor{background:#ff4757;}
+        .cmp-hint{font-size:12px;color:var(--muted);margin-top:14px;}
+        .btn-compare{padding:10px 26px;border-radius:8px;background:var(--grass);color:#061020;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .25s;margin-top:14px;}
+        .btn-compare:hover{background:var(--grass-dark);transform:translateY(-2px);}
+        .btn-compare:disabled{opacity:.35;pointer-events:none;}
+        .btn-clear-cmp{padding:10px 18px;border-radius:8px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .2s;margin-top:14px;margin-left:8px;}
+        .btn-clear-cmp:hover{border-color:var(--muted);color:var(--white);}
+        .cmp-result{display:none;margin-top:28px;}
+        .cmp-result.visible{display:block;animation:fadeUp .4s ease both;}
+        .verdict-box{background:rgba(245,197,24,0.05);border:1px solid rgba(245,197,24,0.2);border-radius:var(--radius);padding:22px 26px;margin-bottom:22px;position:relative;overflow:hidden;}
+        .verdict-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--grass));}
+        .verdict-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;}
+        .cmp-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px;}
+        .cmp-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:22px;}
+        .cmp-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+        .cmp-card.rnk-0{border-color:var(--gold);}
+        .cmp-card.rnk-1{border-color:rgba(192,192,192,0.4);}
+        .cmp-card.rnk-2{border-color:rgba(205,127,50,0.4);}
+        .cmp-ch{padding:18px 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);}
+        .cmp-crown{font-size:20px;margin-bottom:4px;}
+        .cmp-pname{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;}
+        .cmp-pmeta{font-size:12px;color:var(--muted);margin-top:3px;}
+        .cmp-big{font-family:'Bebas Neue',sans-serif;font-size:50px;color:var(--gold);line-height:1;margin:10px 0 2px;}
+        .cmp-big-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+        .cmp-form-row{display:flex;gap:4px;margin-top:8px;}
+        .fp{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+        .fp-Excellent{background:rgba(0,200,81,0.15);color:#69f0ae;} .fp-Good{background:rgba(100,149,237,0.15);color:#90caf9;} .fp-Average{background:rgba(255,165,0,0.15);color:#ffb74d;} .fp-Poor{background:rgba(255,71,87,0.15);color:#ff6b6b;}
+        .cmp-body{padding:16px 20px;}
+        .cmp-stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+        .cmp-stat-row:last-child{border-bottom:none;}
+        .cmp-stat-lbl{font-size:12px;color:var(--muted);flex:1;}
+        .cmp-stat-bar{flex:2;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;}
+        .cmp-stat-fill{height:5px;background:var(--grass);border-radius:3px;transition:width .5s ease;}
+        .cmp-stat-val{font-family:'Bebas Neue',sans-serif;font-size:20px;min-width:38px;text-align:right;}
+        .cmp-stat-val.best{color:var(--grass);}
+        .cmp-ml{margin-top:14px;padding:12px;background:rgba(0,200,81,0.05);border:1px solid rgba(0,200,81,0.15);border-radius:8px;}
+        .cmp-ml-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grass);margin-bottom:6px;}
+        .cmp-ml-rating{font-family:'Bebas Neue',sans-serif;font-size:24px;}
+        .cmp-ml-conf{font-size:11px;color:var(--muted);}
+        .traj-rising{color:#69f0ae;} .traj-declining{color:#ff6b6b;} .traj-stable{color:#ffb74d;}
+        .radar-wrap{max-width:460px;margin:24px auto 0;}
+        @media(max-width:768px){.cmp-grid-2,.cmp-grid-3{grid-template-columns:1fr;}}
+
+        /* ── Best XI tab ── */
+        .xi-layout{display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start;}
+        @media(max-width:1024px){.xi-layout{grid-template-columns:1fr;}}
+        .xi-formation-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+        .xi-formation-bar span{font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+        .xi-fbtn{padding:7px 20px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+        .xi-fbtn:hover{border-color:var(--grass);color:var(--grass);}
+        .xi-fbtn.active{background:var(--grass);border-color:var(--grass);color:#061020;}
+        .pitch-outer{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+        .pitch-head{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+        .pitch-head-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;}
+        .formation-badge{font-size:12px;font-weight:600;color:var(--gold);padding:3px 12px;border-radius:20px;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.2);}
+        .pitch{background:#0d5c2e;position:relative;width:100%;aspect-ratio:7/10;max-height:620px;}
+        .pl{position:absolute;border:1px solid rgba(255,255,255,0.3);}
+        .pl-outline{top:3%;left:4%;right:4%;bottom:3%;border-radius:4px;}
+        .pl-half{top:50%;left:4%;right:4%;height:0;}
+        .pl-circle{top:50%;left:50%;transform:translate(-50%,-50%);width:18%;padding-bottom:18%;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:transparent;}
+        .pl-dot{width:7px;height:7px;background:rgba(255,255,255,0.4);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+        .pl-box-top{top:3%;left:20%;right:20%;height:16%;}
+        .pl-box-bot{bottom:3%;left:20%;right:20%;height:16%;}
+        .pl-sm-top{top:3%;left:33%;right:33%;height:6%;}
+        .pl-sm-bot{bottom:3%;left:33%;right:33%;height:6%;}
+        .pitch-row{position:absolute;left:0;right:0;display:flex;justify-content:space-evenly;align-items:center;}
+        .row-gk{bottom:6%;} .row-def{bottom:22%;} .row-mid{bottom:40%;} .row-mid2{bottom:57%;} .row-fwd{bottom:72%;}
+        .row-mid2{display:none;}
+        .formation-4-2-3-1 .row-mid2{display:flex;}
+        .formation-4-2-3-1 .row-mid{bottom:36%;}
+        .formation-4-2-3-1 .row-mid2{bottom:54%;}
+        .formation-4-2-3-1 .row-fwd{bottom:70%;}
+        .ptok{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:transform .2s;}
+        .ptok:hover{transform:scale(1.1);}
+        .ptok-circle{width:50px;height:50px;border-radius:50%;background:rgba(0,15,35,0.88);border:2.5px solid var(--grass);display:flex;align-items:center;justify-content:center;position:relative;transition:all .2s;}
+        .ptok-circle.gk-tok{border-color:var(--warning);}
+        .ptok-circle.pitch-sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,197,24,0.3);}
+        .ptok-init{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--white);}
+        .ptok-sc{position:absolute;bottom:-2px;right:-2px;background:var(--grass);color:#061020;font-size:9px;font-weight:700;border-radius:20px;padding:1px 5px;line-height:1.4;}
+        .ptok-circle.gk-tok .ptok-sc{background:var(--warning);}
+        .ptok-name{font-size:9px;font-weight:600;color:var(--white);text-align:center;max-width:68px;text-shadow:0 1px 4px rgba(0,0,0,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .ptok-ml{font-size:8px;color:rgba(255,255,255,0.55);text-shadow:0 1px 3px rgba(0,0,0,0.9);}
+        .bench-outer{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+        .bench-head{padding:14px 18px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+        .bench-row{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:11px;cursor:pointer;transition:background .2s;}
+        .bench-row:last-child{border-bottom:none;}
+        .bench-row:hover{background:rgba(255,255,255,0.03);}
+        .bench-row.bench-sel{background:rgba(245,197,24,0.06);border-left:3px solid var(--gold);}
+        .bench-av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.05);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:13px;flex-shrink:0;}
+        .bench-info{flex:1;}
+        .bench-nm{font-size:13px;font-weight:600;}
+        .bench-mt{font-size:11px;color:var(--muted);margin-top:2px;}
+        .bench-sc{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted);}
+        .swap-panel{background:var(--surface2);border:1px solid rgba(245,197,24,0.25);border-radius:var(--radius);padding:18px;margin-top:14px;display:none;}
+        .swap-panel.visible{display:block;animation:fadeUp .3s ease both;}
+        .swap-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--gold);margin-bottom:10px;}
+        .swap-info{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+        .btn-swap{padding:9px 22px;border-radius:8px;background:var(--gold);color:#061020;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;}
+        .btn-swap:hover{background:#d4a800;}
+        .btn-cancel-sw{padding:9px 16px;border-radius:8px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .2s;margin-left:8px;}
+        .btn-cancel-sw:hover{border-color:var(--muted);color:var(--white);}
+        .xi-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:14px;}
+        .xi-sum-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+        .xi-sum-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;}
+        .xi-sum-row:last-child{border-bottom:none;}
+        .xi-sum-lbl{color:var(--muted);}
+        .xi-sum-val{font-weight:600;}
+
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+
+<nav class="topbar">
+    <div style="display:flex;align-items:center">
+        <div class="topbar-logo">⚽ Thunder <span>FC</span></div>
+        <span class="role-chip">Coach</span>
+    </div>
+    <div class="topbar-right">
+        <a href="{{ url_for('add_performance') }}" class="btn-add">➕ Add Performance</a>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="main">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+        <h1>Team Performance Overview</h1>
+        <p>Monitor your squad · compare players · build your lineup</p>
+    </div>
+
+    <div class="main-tabs">
+        <button class="main-tab {% if active_tab=='squad' %}active{% endif %}" onclick="switchTab('squad',this)">📊 Squad</button>
+        <button class="main-tab {% if active_tab=='compare' %}active{% endif %}" onclick="switchTab('compare',this)">⚖ Compare</button>
+        <button class="main-tab {% if active_tab=='bestxi' %}active{% endif %}" onclick="switchTab('bestxi',this)">⚡ Best XI</button>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- SQUAD TAB                                  -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="tab-pane {% if active_tab=='squad' %}active{% endif %}" id="pane-squad">
+<!-- ── Top Performers ── -->
+    {% if top_performers %}
+    <div style="margin-bottom:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--gold);">🏆 Top Performer Per Position</div>
+    <div class="top-grid">
+        {% for tp in top_performers %}
+        <div class="top-card" style="animation-delay:{{ loop.index * 0.06 }}s">
+            <div class="pos-label">🥇 Best {{ tp.position }}</div>
+            <div class="top-name">{{ tp.name }}</div>
+            <div class="top-score">{{ tp.score }}</div>
+            <div class="top-score-lbl">avg score</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Position Filter ── -->
+    <div class="filter-bar">
+        <span>Filter:</span>
+        <button onclick="filterSquad('All',this)"        class="filter-btn active">All</button>
+        <button onclick="filterSquad('Forward',this)"    class="filter-btn">⚡ Forwards</button>
+        <button onclick="filterSquad('Midfielder',this)" class="filter-btn">🎯 Midfielders</button>
+        <button onclick="filterSquad('Defender',this)"   class="filter-btn">🛡️ Defenders</button>
+        <button onclick="filterSquad('Goalkeeper',this)" class="filter-btn">🧤 Goalkeepers</button>
+    </div>
+
+    {% if players %}
+
+    <!-- ── Squad Summary Table ── -->
+    <div class="section">
+        <div class="section-title">📊 Squad Summary</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Position</th>
+                        <th>Matches</th>
+                        <th>Goals</th>
+                        <th>Assists</th>
+                        <th>Pass Acc.</th>
+                        <th>Avg Score</th>
+                        <th>Rating</th>
+                        <th>Condition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                    <tr class="squad-row" data-pos="{{ player.position }}" onclick="document.getElementById('card-{{ player.player_id }}').scrollIntoView({behavior:'smooth',block:'start'})">
+                        <td>
+                            <div class="player-name-cell">
+                                <div class="avatar-sm">🏃</div>
+                                <strong>{{ player.name }}</strong>
+                            </div>
+                        </td>
+                        <td style="color:var(--muted)">{{ player.position }}</td>
+                        <td>{{ player.total_matches }}</td>
+                        <td><strong style="color:var(--gold)">{{ player.total_goals }}</strong></td>
+                        <td>{{ player.total_assists }}</td>
+                        <td>{{ player.avg_pass_accuracy }}%</td>
+                        <td><strong style="color:var(--grass)">{{ player.avg_performance_score }}</strong></td>
+                        <td><span class="badge badge-{{ player.performance_rating.lower() }}">{{ player.performance_rating }}</span></td>
+                        <td><span class="badge badge-{{ player.condition_color }}">{{ player.condition }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Detailed Player Cards ── -->
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;padding:0 0 18px;">
+        📈 Detailed Player Analysis
+    </div>
+
+    <div class="player-cards">
+        {% for player in players %}
+        <div class="player-card" id="card-{{ player.player_id }}" data-pos="{{ player.position }}">
+
+            <!-- Card Header -->
+            <div class="card-header">
+                <div class="card-header-left">
+                    <div class="avatar-sm" style="width:44px;height:44px;font-size:20px;">🏃</div>
+                    <div>
+                        <h3>{{ player.name }}</h3>
+                        <div class="card-header-badges">
+                            <span class="badge" style="background:rgba(0,200,81,0.1);color:var(--grass)">{{ player.position }}</span>
+                            <span class="badge badge-{{ player.performance_rating.lower() }}">Rating: {{ player.performance_rating }}</span>
+                            <span class="badge badge-{{ player.condition_color }}">Form: {{ player.condition }}</span>
+                            {% if player.ml_insight %}
+                            {% set mlr = player.ml_insight.predicted_rating %}
+                            {% set mlc = player.ml_insight.confidence %}
+                            {% set traj = player.ml_insight.trajectory %}
+                            <span class="badge" style="
+                                background:rgba({% if mlr=='Excellent' %}0,200,81{% elif mlr=='Good' %}100,149,237{% elif mlr=='Average' %}255,165,0{% else %}255,71,87{% endif %},0.15);
+                                color:{% if mlr=='Excellent' %}#69f0ae{% elif mlr=='Good' %}#90caf9{% elif mlr=='Average' %}#ffb74d{% else %}#ff6b6b{% endif %};
+                                border:1px solid rgba({% if mlr=='Excellent' %}0,200,81{% elif mlr=='Good' %}100,149,237{% elif mlr=='Average' %}255,165,0{% else %}255,71,87{% endif %},0.3);">
+                                Forecast: {{ mlr }} ({{ mlc }}%) {% if traj=='rising' %}↑{% elif traj=='declining' %}↓{% else %}→{% endif %}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <a href="{{ url_for('add_performance') }}" class="btn-add-match">➕ Add Match</a>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+
+                <!-- Mini stats -->
+                <div class="mini-stats">
+                    <div class="mini-stat"><div class="val">{{ player.total_matches }}</div><div class="lbl">Matches</div></div>
+                    <div class="mini-stat"><div class="val" style="color:var(--gold)">{{ player.total_goals }}</div><div class="lbl">Goals</div></div>
+                    <div class="mini-stat"><div class="val">{{ player.total_assists }}</div><div class="lbl">Assists</div></div>
+                    <div class="mini-stat"><div class="val">{{ player.avg_pass_accuracy }}%</div><div class="lbl">Pass Acc.</div></div>
+                    <div class="mini-stat"><div class="val" style="color:var(--gold)">{{ player.avg_performance_score }}</div><div class="lbl">Avg Score</div></div>
+                    {% if player.ml_insight %}
+                    {% set mlr = player.ml_insight.predicted_rating %}
+                    {% set mlc = player.ml_insight.confidence %}
+                    {% set mlrgb2 = '0,200,81' if mlr=='Excellent' else ('100,149,237' if mlr=='Good' else ('255,165,0' if mlr=='Average' else '255,71,87')) %}
+                    {% set mlhex2 = '#69f0ae' if mlr=='Excellent' else ('#90caf9' if mlr=='Good' else ('#ffb74d' if mlr=='Average' else '#ff6b6b')) %}
+                    <div class="mini-stat" style="border-color:rgba({{ mlrgb2 }},0.35);background:rgba({{ mlrgb2 }},0.04);">
+                        <div class="val" style="font-size:15px;padding-top:2px;color:{{ mlhex2 }}">{{ mlr }}</div>
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:{{ mlhex2 }};opacity:0.8;margin-top:1px;">{{ mlc }}% sure</div>
+                        <div class="lbl">Next Match</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Chart row — chart only, full width -->
+                <div class="chart-row" style="grid-template-columns:1fr;">
+                    <div class="chart-box">
+                        <canvas id="chart_{{ player.player_id }}"></canvas>
+                    </div>
+                </div>
+
+                <!-- ── Intelligence Strip — full width below chart ── -->
+                {% if player.ml_insight %}
+                {% set ml = player.ml_insight %}
+                {% set mlr = ml.predicted_rating %}
+                {% set mlc = ml.confidence %}
+                {% set mlrgb = '0,200,81' if mlr=='Excellent' else ('100,149,237' if mlr=='Good' else ('255,165,0' if mlr=='Average' else '255,71,87')) %}
+                {% set mlhex = '#00c851' if mlr=='Excellent' else ('#6495ed' if mlr=='Good' else ('#ffa502' if mlr=='Average' else '#ff4757')) %}
+
+                <div style="border:1px solid rgba({{ mlrgb }},0.25);border-radius:10px;overflow:hidden;margin-bottom:18px;">
+
+                    <!-- Top prediction bar — full width, 3 columns -->
+                    <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:0;background:rgba({{ mlrgb }},0.08);border-bottom:1px solid rgba({{ mlrgb }},0.15);">
+
+                        <!-- Col 1: Rating + confidence -->
+                        <div style="padding:14px 20px;border-right:1px solid rgba({{ mlrgb }},0.15);display:flex;align-items:center;gap:16px;">
+                            <div>
+                                <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba({{ mlrgb }},0.7);margin-bottom:3px;">Next Match Prediction</div>
+                                <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:{{ mlhex }};line-height:1;letter-spacing:1px;">{{ mlr }}</div>
+                            </div>
+                            <div style="border-left:1px solid rgba({{ mlrgb }},0.2);padding-left:16px;">
+                                <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Confidence</div>
+                                <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:{{ mlhex }};line-height:1;">{{ mlc }}%</div>
+                                <div style="background:rgba(255,255,255,0.08);border-radius:2px;height:3px;width:60px;margin-top:5px;overflow:hidden;">
+                                    <div style="height:100%;width:{{ mlc }}%;background:{{ mlhex }};border-radius:2px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2: Outlook sentence -->
+                        <div style="padding:14px 20px;">
+                            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba({{ mlrgb }},0.7);margin-bottom:4px;">Outlook</div>
+                            <div style="font-size:13px;color:var(--white);font-weight:600;line-height:1.5;margin-bottom:5px;">{{ ml.outlook }}</div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="font-size:14px;color:{% if ml.trajectory=='rising' %}#00c851{% elif ml.trajectory=='declining' %}#ff4757{% else %}#6495ed{% endif %};">
+                                    {% if ml.trajectory=='rising' %}↑{% elif ml.trajectory=='declining' %}↓{% else %}→{% endif %}
+                                </span>
+                                <span style="font-size:11px;color:var(--muted);">
+                                    {% if ml.trajectory=='rising' %}Rising +{{ ml.trend_pct }}% vs prev 5 matches
+                                    {% elif ml.trajectory=='declining' %}Declining −{{ ml.trend_pct }}% vs prev 5 matches
+                                    {% else %}Stable form{% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Col 3: Priority focus -->
+                        <div style="padding:14px 20px;border-left:1px solid rgba({{ mlrgb }},0.15);min-width:200px;">
+                            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba({{ mlrgb }},0.7);margin-bottom:4px;">Priority Focus</div>
+                            <div style="font-size:12px;font-weight:600;color:{{ mlhex }};margin-bottom:3px;">{{ ml.weakest_label }}</div>
+                            <div style="font-size:11px;color:var(--muted);line-height:1.5;">{{ ml.coaching_tip }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom: stat bars + coaching tips side by side -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;background:rgba(255,255,255,0.01);">
+
+                        <!-- Left: Rolling avg stat bars -->
+                        <div style="padding:14px 20px;border-right:1px solid rgba(255,255,255,0.04);">
+                            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Avg Last {{ ml.window }} Matches</div>
+                            <div style="display:grid;gap:9px;">
+                                {% for label, val, pct in ml.features %}
+                                {% set is_weakest = (label == ml.weakest_label) %}
+                                <div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                                        <span style="font-size:11px;color:{% if is_weakest %}{{ mlhex }}{% else %}var(--muted){% endif %};font-weight:{% if is_weakest %}600{% else %}400{% endif %};">
+                                            {{ label }}{% if is_weakest %} ←{% endif %}
+                                        </span>
+                                        <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:{% if is_weakest %}{{ mlhex }}{% else %}var(--white){% endif %};">{{ val }}</span>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:3px;height:4px;overflow:hidden;">
+                                        <div style="height:100%;width:{{ pct }}%;background:{% if is_weakest %}{{ mlhex }}{% else %}rgba({{ mlrgb }},0.35){% endif %};border-radius:3px;"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Right: Recent form coaching tips -->
+                        <div style="padding:14px 20px;">
+                            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">💡 Recent Form Alerts</div>
+                            {% for s in player.suggestions %}
+                            <div class="suggestion-item" style="font-size:11px;padding:6px 9px;margin-bottom:5px;">{{ s }}</div>
+                            {% endfor %}
+                            {% if not player.suggestions %}
+                            <div style="font-size:11px;color:var(--muted);font-style:italic;">All metrics within acceptable range.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Fallback: no model trained yet -->
+                <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;margin-bottom:18px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+                        <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">💡 Recent Form Alerts</div>
+                            {% for s in player.suggestions %}
+                            <div class="suggestion-item" style="font-size:11px;padding:6px 9px;margin-bottom:5px;">{{ s }}</div>
+                            {% endfor %}
+                            {% if not player.suggestions %}
+                            <div style="font-size:11px;color:var(--muted);font-style:italic;">All recent metrics within range.</div>
+                            {% endif %}
+                        </div>
+                        <div style="padding:14px 18px;background:rgba(255,165,0,0.03);display:flex;align-items:center;gap:12px;">
+                            <span style="font-size:28px;">🤖</span>
+                            <div>
+                                <div style="font-size:11px;font-weight:600;color:#ffb74d;margin-bottom:4px;">Prediction Unavailable</div>
+                                <div style="font-size:11px;color:var(--muted);line-height:1.5;">Train models first — go to Admin Dashboard → Train Models to enable next-match forecasting.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ── Match History Table ── -->
+                <div class="match-history-section">
+                    <div class="match-history-header">
+                        <span class="match-history-title">
+                            📋 Match History
+                            <span style="color:var(--grass);margin-left:6px;">{{ player.match_history|length }}</span>
+                        </span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="toggle-history" onclick="toggleHistory('{{ player.player_id }}', this)">
+                                Show Matches ▾
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="history-body" id="history-{{ player.player_id }}">
+                        {% if player.match_history %}
+                        <div class="history-table-wrap">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Date</th>
+                                        <th>Mins</th>
+                                        <th>Goals</th>
+                                        <th>Assists</th>
+                                        <th>Shots</th>
+                                        <th>Pass%</th>
+                                        {% if player.position == 'Goalkeeper' %}
+                                        <th>Saves</th>
+                                        <th>CS</th>
+                                        {% else %}
+                                        <th>Tackles</th>
+                                        {% endif %}
+                                        <th>Score</th>
+                                        <th>Rating</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for m in player.match_history %}
+                                    <tr>
+                                        <td style="color:var(--muted)">{{ m.match_num }}</td>
+                                        <td>{{ m.match_date }}</td>
+                                        <td>{{ m.minutes_played }}</td>
+                                        <td><strong style="color:var(--gold)">{{ m.goals }}</strong></td>
+                                        <td>{{ m.assists }}</td>
+                                        <td>{{ m.shots_on_target }}</td>
+                                        <td>{{ m.pass_accuracy }}%</td>
+                                        {% if player.position == 'Goalkeeper' %}
+                                        <td>{{ m.saves }}</td>
+                                        <td>{% if m.clean_sheet %}✅{% else %}—{% endif %}</td>
+                                        {% else %}
+                                        <td>{{ m.tackles }}</td>
+                                        {% endif %}
+                                        <td><strong style="color:var(--grass)">{{ m.score }}</strong></td>
+                                        <td><span class="rating-pill rating-{{ m.rating }}">{{ m.rating }}</span></td>
+                                        <td>
+                                            <div class="actions-cell">
+                                                <a href="{{ url_for('edit_performance', perf_id=m.id) }}" class="tbl-btn-edit">✏️ Edit</a>
+                                                <form method="POST" action="{{ url_for('delete_performance', perf_id=m.id) }}" style="display:inline" onsubmit="return confirm('Delete Match {{ m.match_num }} for {{ player.name }}? This cannot be undone.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="tbl-btn-del">🗑 Del</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="no-history">No match records yet for this player.</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- ── End Match History ── -->
+
+            </div><!-- end card-body -->
+        </div><!-- end player-card -->
+        {% endfor %}
+    </div><!-- end player-cards -->
+
+    {% else %}
+    <div class="empty-filter">
+        <div class="big">🔍</div>
+        <p>No {{ pos_filter }} players found.</p>
+        <a href="{{ url_for('coach_dashboard') }}" style="color:var(--grass);text-decoration:none;margin-top:14px;display:inline-block;">← Show all players</a>
+    </div>
+    {% endif %}
+
+
+    </div><!-- end squad tab -->
+
+    <!-- ── COMPARE TAB ── -->
+    <div class="tab-pane {% if active_tab=='compare' %}active{% endif %}" id="pane-compare">
+        <div class="section">
+            <div class="section-title">⚖ Player Comparison</div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Select 2–3 players of the same position to compare head-to-head.</p>
+
+            <!-- Position tabs -->
+            <div class="cmp-pos-tabs">
+                {% for pos in ['Forward','Midfielder','Defender','Goalkeeper'] %}
+                <button class="cmp-pos-tab {% if loop.first %}active{% endif %}" onclick="cmpSwitchPos('{{pos}}',this)">{{pos}}</button>
+                {% endfor %}
+            </div>
+
+            <!-- Player chips per position -->
+            {% for pos, plist in by_pos.items() %}
+            <div class="cmp-player-grid" id="cmp-grid-{{pos}}" {% if not loop.first %}style="display:none"{% endif %}>
+                {% for p in plist | sort(attribute='avg_score', reverse=True) %}
+                <div class="player-chip" data-id="{{p.player_id}}" data-pos="{{p.position}}" onclick="cmpToggle(this)">
+                    <div>
+                        <div class="chip-name">{{p.name}}</div>
+                        <div class="chip-form">{% for r in p.recent_form[:5] %}<span class="form-dot fd-{{r}}"></span>{% endfor %}</div>
+                    </div>
+                    <div class="chip-score">{{p.avg_score}}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="cmp-hint" id="cmpHint">Select 2–3 players (0/3 selected)</div>
+            <div>
+                <button class="btn-compare" id="cmpBtn" disabled onclick="cmpRun()">Compare</button>
+                <button class="btn-clear-cmp" onclick="cmpClear()">Clear</button>
+            </div>
+
+            <!-- Result area -->
+            <div class="cmp-result" id="cmpResult">
+                <div class="verdict-box" id="cmpVerdict"></div>
+                <div id="cmpCards"></div>
+                <div class="section" style="margin-bottom:0">
+                    <div class="section-title" style="font-size:18px">Radar Comparison</div>
+                    <div class="radar-wrap"><canvas id="cmpRadar" height="320"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── BEST XI TAB ── -->
+    <div class="tab-pane {% if active_tab=='bestxi' %}active{% endif %}" id="pane-bestxi">
+        <div class="section">
+            <div class="section-title">⚡ Best XI Builder</div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">AI-ranked lineup — click a pitch player then a bench player of the same position to swap them.</p>
+
+            <!-- Formation selector -->
+            <div class="xi-formation-bar">
+                <span>Formation:</span>
+                {% for f in valid_formations %}
+                <button class="xi-fbtn {% if f==formation %}active{% endif %}" onclick="xiSetFormation('{{f}}',this)">{{f}}</button>
+                {% endfor %}
+            </div>
+
+            <div class="xi-layout">
+                <!-- Pitch -->
+                <div class="pitch-outer">
+                    <div class="pitch-head">
+                        <span class="pitch-head-title">Starting Lineup</span>
+                        <span class="formation-badge" id="xiBadge">{{formation}}</span>
+                    </div>
+                    <div class="pitch" id="xiPitch">
+                        <div class="pl pl-outline"></div>
+                        <div class="pl pl-half"></div>
+                        <div class="pl pl-circle"></div>
+                        <div class="pl-dot"></div>
+                        <div class="pl pl-box-top"></div>
+                        <div class="pl pl-box-bot"></div>
+                        <div class="pl pl-sm-top"></div>
+                        <div class="pl pl-sm-bot"></div>
+                        <div class="pitch-row row-gk" id="xi-row-gk">
+                            {% for p in eleven.gk %}
+                            <div class="ptok" data-id="{{p.player_id}}" data-pos="Goalkeeper" onclick="xiSelectPitch(this)">
+                                <div class="ptok-circle gk-tok"><span class="ptok-init">{{p.name.split()[0][0]}}{{p.name.split()[-1][0]}}</span><span class="ptok-sc">{{p.avg_score}}</span></div>
+                                <span class="ptok-name">{{p.name.split()[-1]}}</span>
+                                <span class="ptok-ml">{{p.ml_rating if p.ml_rating else p.condition}}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="pitch-row row-def" id="xi-row-def">
+                            {% for p in eleven.defenders %}
+                            <div class="ptok" data-id="{{p.player_id}}" data-pos="Defender" onclick="xiSelectPitch(this)">
+                                <div class="ptok-circle"><span class="ptok-init">{{p.name.split()[0][0]}}{{p.name.split()[-1][0]}}</span><span class="ptok-sc">{{p.avg_score}}</span></div>
+                                <span class="ptok-name">{{p.name.split()[-1]}}</span>
+                                <span class="ptok-ml">{{p.ml_rating if p.ml_rating else p.condition}}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="pitch-row row-mid" id="xi-row-mid">
+                            {% for p in eleven.midfielders %}
+                            <div class="ptok" data-id="{{p.player_id}}" data-pos="Midfielder" onclick="xiSelectPitch(this)">
+                                <div class="ptok-circle"><span class="ptok-init">{{p.name.split()[0][0]}}{{p.name.split()[-1][0]}}</span><span class="ptok-sc">{{p.avg_score}}</span></div>
+                                <span class="ptok-name">{{p.name.split()[-1]}}</span>
+                                <span class="ptok-ml">{{p.ml_rating if p.ml_rating else p.condition}}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="pitch-row row-mid2" id="xi-row-mid2"></div>
+                        <div class="pitch-row row-fwd" id="xi-row-fwd">
+                            {% for p in eleven.forwards %}
+                            <div class="ptok" data-id="{{p.player_id}}" data-pos="Forward" onclick="xiSelectPitch(this)">
+                                <div class="ptok-circle"><span class="ptok-init">{{p.name.split()[0][0]}}{{p.name.split()[-1][0]}}</span><span class="ptok-sc">{{p.avg_score}}</span></div>
+                                <span class="ptok-name">{{p.name.split()[-1]}}</span>
+                                <span class="ptok-ml">{{p.ml_rating if p.ml_rating else p.condition}}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bench + swap + summary -->
+                <div>
+                    <div class="bench-outer">
+                        <div class="bench-head">Bench — available substitutes</div>
+                        {% for p in eleven.bench %}
+                        <div class="bench-row" data-id="{{p.player_id}}" data-pos="{{p.position}}" onclick="xiSelectBench(this)">
+                            <div class="bench-av">{{p.name.split()[0][0]}}{{p.name.split()[-1][0]}}</div>
+                            <div class="bench-info">
+                                <div class="bench-nm">{{p.name}}</div>
+                                <div class="bench-mt">{{p.position}} · {{p.matches}} matches</div>
+                            </div>
+                            <div class="bench-sc">{{p.avg_score}}</div>
+                        </div>
+                        {% else %}
+                        <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No bench players — add more match records.</div>
+                        {% endfor %}
+                    </div>
+                    <div class="swap-panel" id="xiSwapPanel">
+                        <div class="swap-title">Confirm Swap</div>
+                        <div class="swap-info" id="xiSwapInfo"></div>
+                        <button class="btn-swap" id="xiSwapBtn" onclick="xiConfirmSwap()">Confirm Swap</button>
+                        <button class="btn-cancel-sw" onclick="xiCancelSwap()">Cancel</button>
+                    </div>
+                    <div class="xi-summary">
+                        <div class="xi-sum-title">Team Overview</div>
+                        <div class="xi-sum-row"><span class="xi-sum-lbl">Formation</span><span class="xi-sum-val" id="xiSumForm">{{formation}}</span></div>
+                        <div class="xi-sum-row"><span class="xi-sum-lbl">Avg team score</span><span class="xi-sum-val" id="xiSumAvg">
+                            {{ ((eleven.gk + eleven.defenders + eleven.midfielders + eleven.forwards)|map(attribute='avg_score')|sum / 11)|round(2) }}
+                        </span></div>
+                        <div class="xi-sum-row"><span class="xi-sum-lbl">AI predictions</span><span class="xi-sum-val">
+                            {{ (eleven.gk + eleven.defenders + eleven.midfielders + eleven.forwards)|selectattr('ml_rating')|list|length }} / 11
+                        </span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end main -->
+
+<script>
+    function renderCharts() {
+    const playerIds = [{% for p in players %}"{{ p.player_id }}"{% if not loop.last %},{% endif %}{% endfor %}];
+    playerIds.forEach(id => {
+        fetch('/api/player_performance/' + id)
+            .then(r => r.json())
+            .then(data => {
+                const canvas = document.getElementById('chart_' + id);
+                if (!canvas || canvas.dataset.loaded) return;
+                canvas.dataset.loaded = '1';
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: data.labels, datasets: [{
+                        label: 'Score', data: data.scores,
+                        borderColor: '#00c851', backgroundColor: 'rgba(0,200,81,0.08)',
+                        tension: 0.4, fill: true, borderWidth: 2.5,
+                        pointBackgroundColor: '#00c851', pointRadius: 4, pointHoverRadius: 6
+                    }]},
+                    options: { responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false },
+                            tooltip: { backgroundColor: '#172035', borderColor: 'rgba(255,255,255,0.07)', borderWidth: 1,
+                                titleColor: '#f0f4ff', bodyColor: '#8892a4', cornerRadius: 8, padding: 10 }},
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8892a4', font: { size: 10 }}},
+                            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8892a4', font: { size: 10 }}, beginAtZero: true }
+                        }
+                    }
+                });
+            });
+    });
+    }
+
+    // ── Toggle match history ──
+    function toggleHistory(playerId, btn) {
+        const body = document.getElementById('history-' + playerId);
+        const isOpen = body.classList.contains('open');
+        body.classList.toggle('open');
+        btn.textContent = isOpen ? 'Show Matches ▾' : 'Hide Matches ▴';
+    }
+
+
+    // ═══════════════════════════════════════════════
+    // TAB SWITCHING
+    // ═══════════════════════════════════════════════
+    function switchTab(name, btn) {
+        document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('pane-' + name).classList.add('active');
+        // Lazy-render charts only when squad tab visible
+        if (name === 'squad') renderCharts();
+    }
+
+    // ═══════════════════════════════════════════════
+    // COMPARE TAB
+    // ═══════════════════════════════════════════════
+    const ALL_STATS = {{ all_stats_json | safe }};
+    const statsMap  = {};
+    ALL_STATS.forEach(p => { statsMap[p.player_id] = p; });
+
+    let cmpSelected = [];
+    let cmpRadarChart = null;
+
+    function cmpSwitchPos(pos, btn) {
+        document.querySelectorAll('.cmp-pos-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.cmp-player-grid').forEach(g => g.style.display = 'none');
+        document.getElementById('cmp-grid-' + pos).style.display = 'flex';
+        cmpClear();
+    }
+
+    function cmpToggle(el) {
+        const id  = el.dataset.id;
+        const pos = el.dataset.pos;
+        if (cmpSelected.length > 0 && statsMap[cmpSelected[0]].position !== pos) return;
+        const idx = cmpSelected.indexOf(id);
+        if (idx > -1) {
+            // Remove this player and clear all sel-* classes on all chips
+            cmpSelected.splice(idx, 1);
+            // FIX: clear ALL sel-* classes first, then re-apply in correct order.
+            // The old code only re-indexed sel-1, leaving sel-2 stale when
+            // player 0 or player 1 was deselected.
+            document.querySelectorAll('.player-chip').forEach(c =>
+                c.classList.remove('sel-0', 'sel-1', 'sel-2')
+            );
+            cmpSelected.forEach((selId, i) => {
+                const chip = document.querySelector(`.player-chip[data-id="${selId}"]`);
+                if (chip) chip.classList.add('sel-' + i);
+            });
+        } else {
+            if (cmpSelected.length >= 3) return;
+            el.classList.add('sel-' + cmpSelected.length);
+            cmpSelected.push(id);
+        }
+        cmpUpdateHint();
+    }
+
+    function cmpUpdateHint() {
+        document.getElementById('cmpHint').textContent =
+            cmpSelected.length >= 2 ? `${cmpSelected.length}/3 selected — ready to compare` : `${cmpSelected.length}/3 — select at least 2`;
+        document.getElementById('cmpBtn').disabled = cmpSelected.length < 2;
+    }
+
+    function cmpClear() {
+        cmpSelected = [];
+        document.querySelectorAll('.player-chip').forEach(c => c.classList.remove('sel-0','sel-1','sel-2'));
+        document.getElementById('cmpResult').classList.remove('visible');
+        cmpUpdateHint();
+    }
+
+    function cmpGetStatDefs(pos) {
+        const base = [{k:'avg_score',l:'Avg Score'},{k:'avg_pass',l:'Pass Acc'},{k:'total_goals',l:'Goals'},{k:'total_assists',l:'Assists'}];
+        if (pos === 'Defender' || pos === 'Midfielder') base.push({k:'total_tackles',l:'Tackles'});
+        if (pos === 'Goalkeeper') base.push({k:'total_saves',l:'Saves'});
+        return base;
+    }
+
+    function cmpRun() {
+        const players = cmpSelected.map(id => statsMap[id]).sort((a,b) => b.avg_score - a.avg_score);
+        const crowns  = ['🥇','🥈','🥉'];
+        const rnks    = ['rnk-0','rnk-1','rnk-2'];
+        const pos     = players[0].position;
+        const defs    = cmpGetStatDefs(pos);
+        const maxes   = {};
+        defs.forEach(d => { maxes[d.k] = Math.max(...players.map(p => p[d.k] || 0), 1); });
+
+        // Verdict
+        const best = players[0];
+        const tTxt = {rising:'trending upward',declining:'in declining form',stable:'in stable form'}[best.ml_trajectory] || '';
+        document.getElementById('cmpVerdict').innerHTML = `
+            <div class="verdict-title">Coach's Recommendation</div>
+            <div style="font-size:14px;color:var(--white);line-height:1.7">
+                <strong>${best.name}</strong> leads with avg score <strong>${best.avg_score}</strong>${tTxt ? ', ' + tTxt : ''}.
+                ${best.ml_rating ? `AI predicts <strong>${best.ml_rating}</strong> next match (${best.ml_confidence}% confidence).` : ''}
+                ${players.length===2 ? `Gap vs ${players[1].name}: ${(best.avg_score-players[1].avg_score).toFixed(2)} points.` : ''}
+            </div>`;
+
+        // Cards
+        const cols   = players.length === 2 ? 'cmp-grid-2' : 'cmp-grid-3';
+        const cardsH = players.map((p,i) => {
+            const formH = (p.recent_form||[]).map(r=>`<span class="fp fp-${r}">${r}</span>`).join('');
+            const statsH = defs.map(d => {
+                const v   = p[d.k] || 0;
+                const pct = Math.round((v / maxes[d.k]) * 100);
+                const best= v >= Math.max(...players.map(q=>q[d.k]||0));
+                return `<div class="cmp-stat-row">
+                    <span class="cmp-stat-lbl">${d.l}</span>
+                    <div class="cmp-stat-bar"><div class="cmp-stat-fill" style="width:${pct}%"></div></div>
+                    <span class="cmp-stat-val ${best?'best':''}">${Number.isInteger(v)?v:v.toFixed(1)}</span>
+                </div>`;
+            }).join('');
+            const mlH = p.ml_rating ? `<div class="cmp-ml"><div class="cmp-ml-lbl">AI next match</div>
+                <div class="cmp-ml-rating">${p.ml_rating}</div>
+                <div class="cmp-ml-conf">${p.ml_confidence}% · <span class="traj-${p.ml_trajectory}">${p.ml_trajectory}</span></div></div>` : '';
+            return `<div class="cmp-card ${rnks[i]}"><div class="cmp-ch">
+                <div class="cmp-crown">${crowns[i]}</div>
+                <div class="cmp-pname">${p.name}</div>
+                <div class="cmp-pmeta">${p.position} · ${p.matches} matches</div>
+                <div class="cmp-big">${p.avg_score}</div>
+                <div class="cmp-big-lbl">avg score</div>
+                <div class="cmp-form-row">${formH}</div>
+            </div><div class="cmp-body">${statsH}${mlH}</div></div>`;
+        }).join('');
+        document.getElementById('cmpCards').innerHTML = `<div class="${cols}" style="margin-bottom:20px">${cardsH}</div>`;
+
+        // Radar
+        const labels  = defs.map(d => d.l);
+        const maxArr  = defs.map(d => Math.max(...players.map(p=>p[d.k]||0), 1));
+        const colors  = [{b:'#00c851',bg:'rgba(0,200,81,.15)'},{b:'#f5c518',bg:'rgba(245,197,24,.15)'},{b:'#6495ed',bg:'rgba(100,149,237,.15)'}];
+        const datasets= players.map((p,i)=>({
+            label: p.name,
+            data:  defs.map((d,j)=>Math.round(((p[d.k]||0)/maxArr[j])*100)),
+            borderColor:colors[i].b, backgroundColor:colors[i].bg, borderWidth:2,
+            pointBackgroundColor:colors[i].b, pointRadius:4
+        }));
+        if (cmpRadarChart) cmpRadarChart.destroy();
+        cmpRadarChart = new Chart(document.getElementById('cmpRadar').getContext('2d'),{
+            type:'radar', data:{labels,datasets},
+            options:{responsive:true,plugins:{legend:{labels:{color:'#8892a4',font:{size:11}}}},
+                scales:{r:{min:0,max:100,grid:{color:'rgba(255,255,255,0.06)'},angleLines:{color:'rgba(255,255,255,0.06)'},
+                    ticks:{color:'#8892a4',backdropColor:'transparent',font:{size:10}},
+                    pointLabels:{color:'#f0f4ff',font:{size:11}}}}}
+        });
+        document.getElementById('cmpResult').classList.add('visible');
+    }
+
+    // ═══════════════════════════════════════════════
+    // BEST XI TAB
+    // ═══════════════════════════════════════════════
+    let xiPitch = null;
+    let xiBench = null;
+
+    const FORMATIONS = {
+        '4-3-3':   {Goalkeeper:1, Defender:4, Midfielder:3, Forward:3},
+        '4-4-2':   {Goalkeeper:1, Defender:4, Midfielder:4, Forward:2},
+        '3-5-2':   {Goalkeeper:1, Defender:3, Midfielder:5, Forward:2},
+        '4-2-3-1': {Goalkeeper:1, Defender:4, Midfielder_dm:2, Midfielder_am:3, Forward:1},
+    };
+    const byPos = {Goalkeeper:[], Defender:[], Midfielder:[], Forward:[]};
+    ALL_STATS.forEach(p => { if (byPos[p.position]) byPos[p.position].push(p); });
+    Object.keys(byPos).forEach(pos => byPos[pos].sort((a,b)=>b.avg_score-a.avg_score));
+
+    function ptokHTML(p, posAttr) {
+        const inits = p.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+        const isGK  = posAttr === 'Goalkeeper';
+        return `<div class="ptok" data-id="${p.player_id}" data-pos="${posAttr}" onclick="xiSelectPitch(this)">
+            <div class="ptok-circle${isGK?' gk-tok':''}">
+                <span class="ptok-init">${inits}</span><span class="ptok-sc">${p.avg_score}</span>
+            </div>
+            <span class="ptok-name">${p.name.split(' ').slice(-1)[0]}</span>
+            <span class="ptok-ml">${p.ml_rating||p.condition||''}</span>
+        </div>`;
+    }
+
+    function benchRowHTML(p) {
+        const inits = p.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+        return `<div class="bench-row" data-id="${p.player_id}" data-pos="${p.position}" onclick="xiSelectBench(this)">
+            <div class="bench-av">${inits}</div>
+            <div class="bench-info"><div class="bench-nm">${p.name}</div>
+            <div class="bench-mt">${p.position} · ${p.matches} matches</div></div>
+            <div class="bench-sc">${p.avg_score}</div>
+        </div>`;
+    }
+
+    function renderFormation(f) {
+        xiCancelSwap();
+        const pitch = document.getElementById('xiPitch');
+        pitch.classList.toggle('formation-4-2-3-1', f === '4-2-3-1');
+        const picked = {Goalkeeper:[], Defender:[], Midfielder:[], _am:[], Forward:[]};
+        const bench  = [];
+        if (f === '4-2-3-1') {
+            picked.Goalkeeper = byPos.Goalkeeper.slice(0,1);
+            picked.Defender   = byPos.Defender.slice(0,4);
+            picked.Midfielder = byPos.Midfielder.slice(0,2);
+            picked._am        = byPos.Midfielder.slice(2,5);
+            picked.Forward    = byPos.Forward.slice(0,1);
+            bench.push(...byPos.Goalkeeper.slice(1,3),...byPos.Defender.slice(4,6),...byPos.Midfielder.slice(5,7),...byPos.Forward.slice(1,3));
+        } else {
+            const slots = FORMATIONS[f];
+            picked.Goalkeeper = byPos.Goalkeeper.slice(0, slots.Goalkeeper);
+            picked.Defender   = byPos.Defender.slice(0,   slots.Defender);
+            picked.Midfielder = byPos.Midfielder.slice(0, slots.Midfielder);
+            picked.Forward    = byPos.Forward.slice(0,    slots.Forward);
+            bench.push(...byPos.Goalkeeper.slice(slots.Goalkeeper, slots.Goalkeeper+2),...byPos.Defender.slice(slots.Defender,slots.Defender+2),...byPos.Midfielder.slice(slots.Midfielder,slots.Midfielder+2),...byPos.Forward.slice(slots.Forward,slots.Forward+2));
+        }
+        document.getElementById('xi-row-gk').innerHTML  = picked.Goalkeeper.map(p=>ptokHTML(p,'Goalkeeper')).join('');
+        document.getElementById('xi-row-def').innerHTML = picked.Defender.map(p=>ptokHTML(p,'Defender')).join('');
+        document.getElementById('xi-row-mid').innerHTML = picked.Midfielder.map(p=>ptokHTML(p,'Midfielder')).join('');
+        document.getElementById('xi-row-mid2').innerHTML= picked._am.map(p=>ptokHTML(p,'Midfielder')).join('');
+        document.getElementById('xi-row-fwd').innerHTML = picked.Forward.map(p=>ptokHTML(p,'Forward')).join('');
+        const benchUniq = [...new Map(bench.map(p=>[p.player_id,p])).values()].slice(0,7);
+        document.querySelector('.bench-outer').innerHTML = '<div class="bench-head">Bench — available substitutes</div>' +
+            (benchUniq.length ? benchUniq.map(benchRowHTML).join('') : '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No bench players.</div>');
+        document.getElementById('xiBadge').textContent   = f;
+        document.getElementById('xiSumForm').textContent = f;
+        const all11 = [...picked.Goalkeeper,...picked.Defender,...picked.Midfielder,...picked._am,...picked.Forward];
+        document.getElementById('xiSumAvg').textContent = (all11.reduce((s,p)=>s+p.avg_score,0)/(all11.length||1)).toFixed(2);
+    }
+
+    function xiSetFormation(f, btn) {
+        document.querySelectorAll('.xi-fbtn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        renderFormation(f);
+    }
+
+    function xiSelectPitch(el) {
+        if (xiPitch && xiPitch.el === el) { xiCancelSwap(); return; }
+        document.querySelectorAll('.ptok-circle').forEach(c=>c.classList.remove('pitch-sel'));
+        el.querySelector('.ptok-circle').classList.add('pitch-sel');
+        xiPitch = {id: el.dataset.id, pos: el.dataset.pos, el};
+        if (xiBench) xiTrySwap();
+    }
+
+    function xiSelectBench(el) {
+        if (xiBench && xiBench.el === el) { xiCancelSwap(); return; }
+        document.querySelectorAll('.bench-row').forEach(r=>r.classList.remove('bench-sel'));
+        el.classList.add('bench-sel');
+        xiBench = {id: el.dataset.id, pos: el.dataset.pos, el};
+        if (xiPitch) xiTrySwap();
+    }
+
+    function xiTrySwap() {
+        const panel = document.getElementById('xiSwapPanel');
+        const info  = document.getElementById('xiSwapInfo');
+        const btn   = document.getElementById('xiSwapBtn');
+        panel.classList.add('visible');
+        if (xiPitch.pos !== xiBench.pos) {
+            info.innerHTML = `<span style="color:#ff6b6b">Position mismatch — ${xiPitch.pos} ↔ ${xiBench.pos}. Only same-position swaps allowed.</span>`;
+            btn.style.display = 'none'; return;
+        }
+        const out = statsMap[xiPitch.id], inn = statsMap[xiBench.id];
+        const diff = (inn.avg_score - out.avg_score).toFixed(2);
+        info.innerHTML = `Replace <strong>${out.name}</strong> (${out.avg_score}) with <strong>${inn.name}</strong> (${inn.avg_score}) &nbsp;<span style="color:${diff>=0?'#69f0ae':'#ff6b6b'}">${diff>=0?'+':''}${diff}</span>`;
+        btn.style.display = '';
+    }
+
+    function xiConfirmSwap() {
+        if (!xiPitch || !xiBench || xiPitch.pos !== xiBench.pos) return;
+        const out = statsMap[xiPitch.id], inn = statsMap[xiBench.id];
+        // Update pitch token
+        const tok = xiPitch.el;
+        const inits = inn.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+        tok.querySelector('.ptok-init').textContent = inits;
+        tok.querySelector('.ptok-sc').textContent   = inn.avg_score;
+        tok.querySelector('.ptok-name').textContent = inn.name.split(' ').slice(-1)[0];
+        tok.querySelector('.ptok-ml').textContent   = inn.ml_rating || inn.condition || '';
+        tok.dataset.id = inn.player_id;
+        tok.querySelector('.ptok-circle').classList.remove('pitch-sel');
+        // Update bench row
+        const br = xiBench.el;
+        br.querySelector('.bench-av').textContent   = out.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+        br.querySelector('.bench-nm').textContent   = out.name;
+        br.querySelector('.bench-mt').textContent   = `${out.position} · ${out.matches} matches`;
+        br.querySelector('.bench-sc').textContent   = out.avg_score;
+        br.dataset.id = out.player_id;
+        br.classList.remove('bench-sel');
+        // Recalc avg
+        let total=0, count=0;
+        document.querySelectorAll('.ptok').forEach(t=>{const p=statsMap[t.dataset.id];if(p){total+=p.avg_score;count++;}});
+        if(count) document.getElementById('xiSumAvg').textContent = (total/count).toFixed(2);
+        xiCancelSwap();
+    }
+
+    function xiCancelSwap() {
+        xiPitch = null; xiBench = null;
+        document.querySelectorAll('.ptok-circle').forEach(c=>c.classList.remove('pitch-sel'));
+        document.querySelectorAll('.bench-row').forEach(r=>r.classList.remove('bench-sel'));
+        document.getElementById('xiSwapPanel').classList.remove('visible');
+    }
+
+    // Init — render charts only if squad tab is active on load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.getElementById('pane-squad').classList.contains('active')) {
+            renderCharts();
+        }
+    });
+
+    // ── Client-side position filter (no page reload) ──────────────────────
+    function filterSquad(pos, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Filter table rows
+        document.querySelectorAll('.squad-row').forEach(row => {
+            row.style.display = (pos === 'All' || row.dataset.pos === pos) ? '' : 'none';
+        });
+
+        // Filter player cards
+        document.querySelectorAll('.player-card').forEach(card => {
+            card.style.display = (pos === 'All' || card.dataset.pos === pos) ? '' : 'none';
+        });
+
+        // Charts are already loaded on first squad tab activation.
+        // renderCharts() guards against double-loading but still fires fetches
+        // on every filter click, so we skip it here entirely.
+    }
+</script>
+</body>
+</html>

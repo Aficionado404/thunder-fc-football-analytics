@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Training — {{ team_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--pitch:#0a1628;--grass:#00c851;--grass-dark:#009c3b;--gold:#f5c518;--white:#f0f4ff;--muted:#8892a4;--surface:#111d30;--surface2:#172035;--border:rgba(255,255,255,0.07);--danger:#ff4757;--radius:12px;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--pitch);color:var(--white);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:48px;max-width:520px;width:100%;margin:24px;text-align:center;position:relative;overflow:hidden;animation:fadeUp .5s ease both;}
+        .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--grass),var(--gold));}
+        .icon{font-size:64px;margin-bottom:24px;}
+        h1{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;margin-bottom:12px;}
+        .description{color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:32px;}
+        .warning-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:10px;padding:16px 20px;margin-bottom:32px;text-align:left;}
+        .warning-box .warn-title{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#ffb74d;font-weight:700;margin-bottom:8px;}
+        .warning-box ul{list-style:none;padding:0;}
+        .warning-box li{font-size:13px;color:var(--muted);padding:3px 0;padding-left:18px;position:relative;}
+        .warning-box li::before{content:'⚠';position:absolute;left:0;font-size:11px;}
+        .stat-row{display:flex;justify-content:center;gap:32px;margin-bottom:32px;}
+        .stat-item{text-align:center;}
+        .stat-item .val{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--grass);line-height:1;}
+        .stat-item .lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+        .btn-row{display:flex;gap:14px;justify-content:center;}
+        .btn-confirm{padding:14px 36px;border-radius:8px;background:var(--grass);color:#061020;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:all .25s;letter-spacing:.5px;}
+        .btn-confirm:hover{background:var(--grass-dark);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,200,81,0.3);}
+        .btn-cancel{padding:14px 36px;border-radius:8px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;border:1px solid var(--border);text-decoration:none;transition:all .25s;}
+        .btn-cancel:hover{border-color:var(--muted);color:var(--white);}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+<div class="card">
+    <div class="icon">🤖</div>
+    <h1>Confirm Model Training</h1>
+    <p class="description">
+        You are about to train 4 position-specific Random Forest models.<br>
+        This will overwrite any previously trained models.
+    </p>
+
+    <div class="stat-row">
+        <div class="stat-item">
+            <div class="val">4</div>
+            <div class="lbl">Models</div>
+        </div>
+        <div class="stat-item">
+            <div class="val">{{ perf_count }}</div>
+            <div class="lbl">Records</div>
+        </div>
+    </div>
+
+    <div class="warning-box">
+        <div class="warn-title">Before you continue</div>
+        <ul>
+            <li>Existing trained models will be overwritten</li>
+            <li>Training may take 10–30 seconds</li>
+            <li>Requires at least 10 performance records</li>
+        </ul>
+    </div>
+
+    <div class="btn-row">
+        <form method="POST" action="{{ url_for('train_model') }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-confirm">✅ Confirm &amp; Train</button>
+        </form>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn-cancel">Cancel</a>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Performance — {{ team_name if team_name else 'Thunder FC' }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pitch: #0a1628;
+            --grass: #00c851;
+            --grass-dark: #009c3b;
+            --gold: #f5c518;
+            --white: #f0f4ff;
+            --muted: #8892a4;
+            --surface: #111d30;
+            --surface2: #172035;
+            --border: rgba(255,255,255,0.07);
+            --danger: #ff4757;
+            --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--pitch); color: var(--white); min-height: 100vh; }
+
+        /* Topbar */
+        .topbar {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            padding: 0 32px; height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .topbar-logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; }
+        .topbar-logo span { color: var(--grass); }
+
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+        .btn-back {
+            padding: 8px 20px; border-radius: 8px;
+            background: rgba(255,255,255,0.05); color: var(--white);
+            border: 1px solid var(--border);
+            font-family: 'DM Sans',sans-serif; font-size: 13px; font-weight: 500;
+            cursor: pointer; text-decoration: none; transition: all 0.25s;
+        }
+        .btn-back:hover { background: rgba(255,255,255,0.1); }
+
+        .btn-logout {
+            padding: 8px 20px; border-radius: 8px;
+            background: rgba(255,71,87,0.1); color: var(--danger);
+            border: 1px solid rgba(255,71,87,0.2);
+            font-family: 'DM Sans',sans-serif; font-size: 13px; font-weight: 600;
+            cursor: pointer; text-decoration: none; transition: all 0.25s;
+        }
+        .btn-logout:hover { background: var(--danger); color: white; }
+
+        /* Main */
+        .main { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+        .page-header { margin-bottom: 32px; animation: fadeUp 0.4s ease both; }
+        .page-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 40px; letter-spacing: 2px; }
+        .page-header p { color: var(--muted); margin-top: 6px; font-size: 14px; }
+
+        /* Info banner */
+        .info-banner {
+            background: rgba(100,149,237,0.06);
+            border: 1px solid rgba(100,149,237,0.2);
+            border-radius: var(--radius); padding: 20px 24px;
+            margin-bottom: 28px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .info-pos { }
+        .info-pos .pos-name {
+            font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+            color: #6495ed; font-weight: 600; margin-bottom: 6px;
+        }
+        .info-pos .pos-metrics {
+            font-size: 12px; color: var(--muted); line-height: 1.7;
+        }
+
+        /* Form card */
+        .form-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            animation: fadeUp 0.5s ease both;
+        }
+
+        .form-card-header {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        .form-card-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; }
+
+        /* Player selector */
+        .player-selector {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,200,81,0.03);
+        }
+
+        .player-selector label {
+            font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--muted); font-weight: 600; display: block; margin-bottom: 10px;
+        }
+
+        .player-grid {
+            display: flex; flex-wrap: wrap; gap: 10px;
+        }
+
+        .player-option {
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .player-option:hover { border-color: rgba(0,200,81,0.3); background: rgba(0,200,81,0.05); }
+
+        .player-option.selected {
+            border-color: var(--grass);
+            background: rgba(0,200,81,0.1);
+        }
+
+        .player-option .p-name { font-size: 14px; font-weight: 600; }
+        .player-option .p-pos { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .player-option .p-pos.Forward { color: var(--gold); }
+        .player-option .p-pos.Midfielder { color: var(--grass); }
+        .player-option .p-pos.Defender { color: #6495ed; }
+        .player-option .p-pos.Goalkeeper { color: #ff8c69; }
+
+        /* Hidden select for form submission */
+        #player_id { display: none; }
+
+        /* Form body */
+        .form-body { padding: 28px; }
+
+        .form-section-label {
+            font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--muted); font-weight: 600; margin-bottom: 16px;
+            padding-bottom: 8px; border-bottom: 1px solid var(--border);
+        }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; margin-bottom: 24px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+        .form-group small { font-size: 11px; color: #3d4f6a; }
+
+        .form-group input, .form-group select {
+            padding: 12px 14px; background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border); border-radius: 8px;
+            color: var(--white); font-family: 'DM Sans',sans-serif; font-size: 14px;
+            transition: all 0.25s; outline: none;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--grass); background: rgba(0,200,81,0.05);
+            box-shadow: 0 0 0 3px rgba(0,200,81,0.1);
+        }
+        .form-group input::placeholder { color: #3d4f6a; }
+
+        /* GK fields */
+        .gk-section {
+            display: none;
+            background: rgba(255,140,105,0.05);
+            border: 1px solid rgba(255,140,105,0.2);
+            border-radius: 8px; padding: 20px;
+            margin-bottom: 24px;
+        }
+        .gk-section .form-section-label { color: #ff8c69; border-color: rgba(255,140,105,0.2); }
+
+        .checkbox-wrap {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checkbox-wrap:hover { border-color: rgba(0,200,81,0.3); background: rgba(0,200,81,0.04); }
+        .checkbox-wrap input[type="checkbox"] {
+            width: 18px; height: 18px;
+            accent-color: var(--grass);
+            cursor: pointer;
+        }
+        .checkbox-wrap label {
+            font-size: 14px; color: var(--white); cursor: pointer;
+            font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400;
+        }
+
+        /* Progress indicator */
+        .form-progress {
+            display: flex; gap: 6px; align-items: center;
+            padding: 0 28px 20px;
+        }
+        .progress-step {
+            height: 3px; flex: 1; border-radius: 2px;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+        .progress-step.done { background: var(--grass); }
+
+        /* Submit */
+        .form-actions {
+            display: flex; align-items: center; gap: 16px;
+            border-top: 1px solid var(--border);
+            padding: 20px 28px; background: rgba(255,255,255,0.02);
+        }
+
+        .btn-submit {
+            padding: 13px 36px; border-radius: 8px;
+            background: var(--grass); color: #061020;
+            font-family: 'DM Sans',sans-serif; font-size: 15px; font-weight: 700;
+            border: none; cursor: pointer; transition: all 0.25s;
+            letter-spacing: 0.5px;
+        }
+        .btn-submit:hover { background: var(--grass-dark); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,200,81,0.3); }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/custom.js') }}" defer></script>
+</head>
+<body>
+
+<nav class="topbar">
+    <div class="topbar-logo">⚽ Thunder <span>FC</span></div>
+    <div class="topbar-right">
+        <a href="{{ url_for('coach_dashboard') }}" class="btn-back">← Back to Dashboard</a>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="main">
+
+    <div class="page-header">
+        <h1>Add Match Performance</h1>
+        <p>Enter detailed match statistics for a player</p>
+    </div>
+
+    <!-- Position guide -->
+    <div class="info-banner">
+        <div class="info-pos">
+            <div class="pos-name">⚡ Forward</div>
+            <div class="pos-metrics">Goals · Shots on target · Assists</div>
+        </div>
+        <div class="info-pos">
+            <div class="pos-name" style="color:var(--grass)">🎯 Midfielder</div>
+            <div class="pos-metrics">Assists · Pass accuracy · Tackles</div>
+        </div>
+        <div class="info-pos">
+            <div class="pos-name" style="color:#6495ed">🛡️ Defender</div>
+            <div class="pos-metrics">Tackles · Pass accuracy · Distribution</div>
+        </div>
+        <div class="info-pos">
+            <div class="pos-name" style="color:#ff8c69">🧤 Goalkeeper</div>
+            <div class="pos-metrics">Saves · Clean sheets · Distribution</div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('add_performance') }}" id="perfForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="player_id" id="player_id">
+
+        <div class="form-card">
+            <div class="form-card-header">
+                <span style="font-size:22px">👤</span>
+                <h2>Select Player</h2>
+            </div>
+
+            <div class="player-selector">
+                <label>Choose player for this match</label>
+                <div class="player-grid">
+                    {% for player in players %}
+                    <div class="player-option" data-id="{{ player.player_id }}" data-pos="{{ player.position }}" onclick="selectPlayer(this)">
+                        <div class="p-name">{{ player.name }}</div>
+                        <div class="p-pos {{ player.position }}">{{ player.position }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-progress" id="formProgress">
+                <div class="progress-step" id="step1"></div>
+                <div class="progress-step" id="step2"></div>
+                <div class="progress-step" id="step3"></div>
+            </div>
+
+            <div class="form-body">
+
+                <div class="form-section-label">📅 Match Info</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Match Date</label>
+                        <input type="date" name="match_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Minutes Played</label>
+                        <input type="number" name="minutes_played" required min="0" max="120" placeholder="90">
+                        <small>0 – 120 minutes</small>
+                    </div>
+                </div>
+
+                <div class="form-section-label">⚽ Offensive Stats</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Goals</label>
+                        <input type="number" name="goals" value="0" min="0" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Assists</label>
+                        <input type="number" name="assists" value="0" min="0" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Shots on Target</label>
+                        <input type="number" name="shots_on_target" value="0" min="0" max="50">
+                    </div>
+                </div>
+
+                <div class="form-section-label">🛡️ General Stats</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Pass Accuracy %</label>
+                        <input type="number" name="pass_accuracy" required min="0" max="100" step="0.1" placeholder="85.0">
+                        <small>0 – 100%</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Tackles</label>
+                        <input type="number" name="tackles" value="0" min="0" max="50">
+                    </div>
+                </div>
+
+                <!-- Goalkeeper section — hidden + disabled for non-GK players -->
+                <div class="gk-section" id="gkSection">
+                    <div class="form-section-label">🧤 Goalkeeper Stats</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Saves</label>
+                            <!-- FIX: disabled so the field is excluded from form payload when hidden -->
+                            <input type="number" name="saves" id="savesInput" value="0" min="0" max="50" disabled>
+                        </div>
+                    </div>
+                    <div class="checkbox-wrap">
+                        <!-- FIX: disabled so the checkbox is excluded when hidden -->
+                        <input type="checkbox" name="clean_sheet" id="clean_sheet" disabled>
+                        <label for="clean_sheet">Clean Sheet — kept a clean goal</label>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                    Save Performance Data
+                </button>
+                <span id="submitHint" style="font-size:13px;color:var(--muted)">Select a player to continue</span>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    let selectedPlayerId = null;
+
+    function selectPlayer(el) {
+        // Deselect all
+        document.querySelectorAll('.player-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+
+        selectedPlayerId = el.dataset.id;
+        const position = el.dataset.pos;
+        document.getElementById('player_id').value = selectedPlayerId;
+
+        // Show/hide GK section + enable/disable inputs so non-GK data
+        // is never submitted even if JS ran but the user manipulated the DOM.
+        const gkSection  = document.getElementById('gkSection');
+        const savesInput = document.getElementById('savesInput');
+        const csInput    = document.getElementById('clean_sheet');
+        if (position === 'Goalkeeper') {
+            gkSection.style.display = 'block';
+            gkSection.style.animation = 'fadeUp 0.3s ease both';
+            savesInput.disabled = false;
+            csInput.disabled    = false;
+        } else {
+            gkSection.style.display = 'none';
+            savesInput.value    = '0';
+            savesInput.disabled = true;
+            csInput.checked     = false;
+            csInput.disabled    = true;
+        }
+
+        // Enable submit
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = false;
+        document.getElementById('submitHint').textContent = `Ready to record for ${el.querySelector('.p-name').textContent}`;
+
+        // Update progress
+        updateProgress();
+    }
+
+    function updateProgress() {
+        const inputs = document.querySelectorAll('input[required]');
+        let filled = 0;
+        inputs.forEach(i => { if (i.value) filled++; });
+        const pct = filled / inputs.length;
+
+        ['step1','step2','step3'].forEach((id, idx) => {
+            const el = document.getElementById(id);
+            el.classList.toggle('done', pct > idx / 3);
+        });
+    }
+
+    document.querySelectorAll('input').forEach(i => {
+        i.addEventListener('input', updateProgress);
+    });
+
+    document.getElementById('perfForm').addEventListener('submit', function(e) {
+        if (!selectedPlayerId) {
+            e.preventDefault();
+            alert('Please select a player first.');
+            return;
+        }
+        const btn = document.getElementById('submitBtn');
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
+    });
+
+    // Number input validation feedback
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const min = parseFloat(this.min);
+            const max = parseFloat(this.max);
+            const val = parseFloat(this.value);
+            if (!isNaN(min) && val < min) this.value = min;
+            if (!isNaN(max) && val > max) this.value = max;
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+
+# Database
+data/*.db
+
+# Secrets
+data/_secret_key
+
+# Logs
+logs/*.log
+
+# ML Models (optional)
+models/*.pkl
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
